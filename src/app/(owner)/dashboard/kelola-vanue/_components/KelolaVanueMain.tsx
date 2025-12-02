@@ -1,4 +1,6 @@
 // src/app/(owner)/dashboard/kelola-vanue/_components/KelolaVanueMain.tsx
+"use server"; // Pastikan ini adalah Server Component
+
 import { columns, Venue } from "./colums";
 import { DataTable } from "./data-table";
 
@@ -11,15 +13,21 @@ async function fetchVenues(): Promise<Venue[]> {
     });
 
     if (!response.ok) {
-      console.error(
-        "Gagal mengambil data venues:",
-        response.status,
-        await response.text()
-      );
+      const errorText = await response.text();
+      console.error("Gagal mengambil data venues:", response.status, errorText);
       return [];
     }
 
     const result = await response.json();
+
+    // --- DEBUGGING LOG ---
+    console.log(
+      `[DEBUG] Jumlah Venue yang ditemukan: ${
+        result.data ? result.data.length : 0
+      }`
+    );
+    // ---------------------
+
     return (result.data as Venue[]) || [];
   } catch (error) {
     console.error(

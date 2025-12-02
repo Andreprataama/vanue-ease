@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 // --- TIPE DATA VANUE ---
 export type Venue = {
@@ -35,7 +36,7 @@ export type Venue = {
 const deleteVenueAction = async (
   venueId: number,
   venueName: string,
-  router: any
+  router: ReturnType<typeof useRouter> // Menggunakan tipe yang tepat
 ) => {
   if (
     !confirm(
@@ -65,6 +66,47 @@ const deleteVenueAction = async (
   }
 };
 
+// --- Komponen Cell Aksi yang Benar Menggunakan Hook ---
+// Hooks dipanggil di top level fungsi ini
+const ActionsCell = ({ row }: { row: any }) => {
+  const router = useRouter(); // FIX: Hook dipanggil di level teratas komponen ini
+  const venue = row.original as Venue;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        {/* LINK EDIT KE HALAMAN DINAMIS */}
+        <DropdownMenuItem asChild>
+          <Link href={`/dashboard/kelola-vanue/edit/${venue.id}`}>
+            <Edit2 className="mr-2 h-4 w-4" />
+            Edit Vanue
+          </Link>
+        </DropdownMenuItem>
+
+        {/* Aksi untuk Hapus */}
+        <DropdownMenuItem
+          onClick={() =>
+            deleteVenueAction(venue.id, venue.nama_ruangan, router)
+          }
+          className="text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20"
+        >
+          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+          Hapus Vanue
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 export const columns: ColumnDef<Venue>[] = [
   {
     accessorKey: "nama_ruangan",
@@ -86,7 +128,7 @@ export const columns: ColumnDef<Venue>[] = [
 
       return (
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src={imageUrl}
             alt={venue.nama_ruangan}
             className="size-10 object-cover rounded-md shadow-sm"
@@ -154,43 +196,6 @@ export const columns: ColumnDef<Venue>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const router = useRouter();
-      const venue = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-
-            {/* Link untuk Edit */}
-            <DropdownMenuItem asChild>
-              <Link href={`/dashboard/kelola-vanue/edit/${venue.id}`}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit Vanue
-              </Link>
-            </DropdownMenuItem>
-
-            {/* Aksi untuk Hapus */}
-            <DropdownMenuItem
-              onClick={() =>
-                deleteVenueAction(venue.id, venue.nama_ruangan, router)
-              }
-              className="text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20"
-            >
-              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-              Hapus Vanue
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ActionsCell, // FIX: Menggunakan komponen ActionsCell
   },
 ];

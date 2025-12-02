@@ -39,7 +39,7 @@ function VenueCard({ venue }: { venue: Venue }) {
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-lg w-full">
-      <div className="relative w-full aspect-[3/2] bg-gray-200 dark:bg-gray-700">
+      <div className="relative w-full aspect-3/2 bg-gray-200 dark:bg-gray-700">
         <img
           src={imageUrl}
           alt={`Foto utama ${venue.nama_ruangan}`}

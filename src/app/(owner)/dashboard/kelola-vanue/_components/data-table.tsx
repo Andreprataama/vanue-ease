@@ -1,4 +1,3 @@
-// src/app/(owner)/dashboard/kelola-vanue/_components/data-table.tsx
 "use client";
 import * as React from "react";
 import {
