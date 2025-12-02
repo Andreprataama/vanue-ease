@@ -56,6 +56,7 @@ const formSchema = z
 // --- GET HANDLER: Mengambil daftar Vanue ---
 export async function GET(request: Request) {
   try {
+    // 1. Ambil Sesi Pengguna untuk Otentikasi
     const headersObject = Object.fromEntries(await headers());
     const session = await auth.api.getSession({ headers: headersObject }); //
 

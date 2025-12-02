@@ -1,5 +1,3 @@
-// src/app/(owner)/dashboard/kelola-vanue/tambah-vanue/_components/TambahVanueMain.tsx
-
 "use client";
 
 import React, { useState, useCallback } from "react";
@@ -259,10 +257,9 @@ const TambahVanueMain = () => {
         }
       });
 
-      // 4. Panggil endpoint API Route Handler dengan FormData
       const response = await fetch("/api/vanue", {
         method: "POST",
-        // JANGAN set Content-Type: multipart/form-data, biarkan browser yang mengaturnya
+
         body: formData,
       });
 
