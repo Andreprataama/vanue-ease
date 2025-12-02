@@ -84,7 +84,7 @@ function VenueCard({ venue }: { venue: Venue }) {
 
 async function fetchVenues(): Promise<Venue[]> {
   try {
-    const response = await fetch("/api/vanue", {
+    const response = await fetch("http://localhost:3000/api/vanue", {
       method: "GET",
       cache: "no-store", // Pastikan data selalu baru
     });

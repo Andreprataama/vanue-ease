@@ -131,6 +131,9 @@ export const columns: ColumnDef<Venue>[] = [
           <Image
             src={imageUrl}
             alt={venue.nama_ruangan}
+            // FIX: Tambahkan width dan height eksplisit untuk next/image
+            width={40}
+            height={40}
             className="size-10 object-cover rounded-md shadow-sm"
           />
           <div className="font-medium text-sm">{venue.nama_ruangan}</div>
