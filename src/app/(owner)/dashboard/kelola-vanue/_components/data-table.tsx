@@ -1,3 +1,4 @@
+// src/app/(owner)/dashboard/kelola-vanue/_components/data-table.tsx
 "use client";
 import * as React from "react";
 import {
@@ -36,6 +37,7 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
+
   const table = useReactTable({
     data,
     columns,
@@ -53,12 +55,15 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="">
-      <div className="flex items-center  justify-between py-4">
+      <div className="flex items-center justify-between py-4">
         <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          // Filter berdasarkan kolom nama_ruangan
+          placeholder="Filter nama vanue..."
+          value={
+            (table.getColumn("nama_ruangan")?.getFilterValue() as string) ?? ""
+          }
           onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+            table.getColumn("nama_ruangan")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

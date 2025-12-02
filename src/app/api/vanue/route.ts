@@ -1,17 +1,12 @@
-// src/app/api/vanue/route.ts (DIKOREKSI)
+// src/app/api/vanue/route.ts
 
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 
 import prisma from "@/utils/prisma";
 import { auth } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
-
-// CATATAN PENTING: Untuk Next.js App Router (route.ts), tidak perlu
-// mengekspor 'config' untuk menonaktifkan bodyParser. Menggunakan request.formData()
-// sudah didukung secara default. Blok kode 'export const config = ...' yang lama
-// telah dihapus.
 
 // --- Zod Schema Server-Side ---
 const formSchema = z
@@ -20,14 +15,15 @@ const formSchema = z
     deskripsi_venue: z.string().min(1, "Deskripsi wajib diisi."),
     alamat_venue: z
       .string()
-      .url("Alamat harus berupa link yang valid.")
-      .or(z.string().min(1, "Alamat Google Maps wajib diisi.")),
+      .min(1, "Alamat Google Maps wajib diisi.")
+      .or(z.string().url("Alamat harus berupa link yang valid.")),
     kapasitas_maks: z.coerce.number().min(1, "Kapasitas minimum adalah 1."),
     category: z.string().min(1, "Kategori wajib dipilih."),
     tipe_sewa: z.enum(["perhari", "perjam"]),
     harga_per_jam: z.coerce.number().optional().nullable().default(null),
     harga_per_hari: z.coerce.number().optional().nullable().default(null),
     fasilitas_kustom: z.string().optional(),
+    selectedFacilities: z.array(z.string()).default([]),
     peraturan_venue: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -53,23 +49,37 @@ const formSchema = z
     }
   });
 
-// --- GET HANDLER: Mengambil daftar Vanue ---
-export async function GET(request: Request) {
-  try {
-    // 1. Ambil Sesi Pengguna untuk Otentikasi
-    const headersObject = Object.fromEntries(await headers());
-    const session = await auth.api.getSession({ headers: headersObject }); //
+// --- Helper: Ambil Session dan Cek Owner ID ---
+async function getOwnerId(): Promise<
+  { ownerId: string } | { response: NextResponse }
+> {
+  const headersObject = Object.fromEntries(headers());
+  const session = await auth.api.getSession({ headers: headersObject });
 
-    if (!session || !session.user) {
-      return NextResponse.json(
+  if (!session || !session.user || !session.user.id) {
+    return {
+      response: NextResponse.json(
         { message: "Unauthorized. Authentication required." },
         { status: 401 }
-      );
-    }
+      ),
+    };
+  }
+  return { ownerId: session.user.id };
+}
 
-    const ownerId = session.user.id;
+// ---------------------------
+// --- 1. GET HANDLER ---
+// ---------------------------
+export async function GET() {
+  const authCheck = await getOwnerId();
+  // --- PERBAIKAN TYPE GUARD: Gunakan 'in' untuk cek properti 'response' ---
+  if ("response" in authCheck) {
+    return authCheck.response;
+  }
+  const ownerId = authCheck.ownerId;
+  // -----------------------------------------------------------------------
 
-    // 2. Ambil data venue milik owner
+  try {
     const venues = await prisma.venue.findMany({
       where: {
         owner_id: ownerId,
@@ -81,6 +91,7 @@ export async function GET(request: Request) {
         harga_per_jam: true,
         harga_per_hari: true,
         kapasitas_maks: true,
+        is_published: true,
         images: {
           where: { is_primary: true },
           select: { image_url: true },
@@ -91,7 +102,6 @@ export async function GET(request: Request) {
       },
     });
 
-    // 3. Kirim respons sukses
     return NextResponse.json({ success: true, data: venues }, { status: 200 });
   } catch (error) {
     console.error("Error fetching venues:", error);
@@ -102,32 +112,23 @@ export async function GET(request: Request) {
   }
 }
 
-// --- POST HANDLER: Menambah Vanue (Sudah mendukung FormData) ---
+// ---------------------------
+// --- 2. POST HANDLER ---
+// ---------------------------
 export async function POST(request: Request) {
+  const authCheck = await getOwnerId();
+  // --- PERBAIKAN TYPE GUARD ---
+  if ("response" in authCheck) {
+    return authCheck.response;
+  }
+  const ownerId = authCheck.ownerId;
+  // -----------------------------
+
   try {
-    // 1. Otentikasi
-    const headersObject = Object.fromEntries(await headers());
-    const session = await auth.api.getSession({ headers: headersObject }); //
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { message: "Unauthorized. Authentication required." },
-        { status: 401 }
-      );
-    }
-
-    const ownerId = session.user.id;
-
-    // 2. Ambil FormData
     const formData = await request.formData();
-
-    // Konversi FormData ke objek untuk validasi Zod
     const rawData = Object.fromEntries(formData.entries());
-
-    // Mengambil semua nilai 'selectedFacilities' (karena bisa multi-value di FormData)
     const selectedFacilities = formData.getAll("selectedFacilities") || [];
 
-    // Gabungkan kembali dengan rawData dan konversi nilai 'null'/'kosong'
     const dataToValidate = {
       ...rawData,
       selectedFacilities: selectedFacilities,
@@ -141,7 +142,6 @@ export async function POST(request: Request) {
           : rawData.harga_per_hari,
     };
 
-    // Lakukan validasi Zod
     const validatedData = formSchema.safeParse(dataToValidate);
 
     if (!validatedData.success) {
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       const fileEntry = formData.get(key);
 
       if (fileEntry instanceof File && fileEntry.size > 0) {
-        // SIMULASI: Di sini harusnya logika pengunggahan ke Cloud Storage.
+        // SIMULASI: Ganti ini dengan logika pengunggahan ke Cloud Storage.
         const isPrimary = i === 0;
         const filename = fileEntry.name.replace(/\s/g, "_");
         const venueNameSlug = nama_ruangan
@@ -195,7 +195,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Tambahkan Gambar Default jika tidak ada
     if (imageLinks.length === 0) {
       imageLinks.push({
         image_url: "/assets/default_venue.jpg",
@@ -223,7 +222,8 @@ export async function POST(request: Request) {
 
     // --- Kelola Fasilitas (Upsert) ---
     const facilityConnects = [];
-    for (const facilityName of selectedFacilities) {
+    // Menggunakan validatedData.data.selectedFacilities
+    for (const facilityName of validatedData.data.selectedFacilities) {
       const facility = await prisma.facility.upsert({
         where: { nama_fasilitas: String(facilityName) },
         update: {},
@@ -252,7 +252,6 @@ export async function POST(request: Request) {
         venueFacilities: {
           create: facilityConnects,
         },
-        // Tambahkan data gambar
         images: {
           createMany: {
             data: imageLinks,
@@ -261,11 +260,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // 4. Kirim respons sukses
     return NextResponse.json(
       {
         success: true,
-        message: `Venue '${newVenue.nama_ruangan}' berhasil ditambahkan, termasuk ${imageLinks.length} gambar!`,
+        message: `Venue '${newVenue.nama_ruangan}' berhasil ditambahkan.`,
         venue: newVenue,
       },
       { status: 201 }
@@ -274,6 +272,201 @@ export async function POST(request: Request) {
     console.error("Error creating venue:", error);
     return NextResponse.json(
       { message: "Failed to add venue due to a server error." },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------
+// --- 3. PUT HANDLER ---
+// ---------------------------
+export async function PUT(request: Request) {
+  const authCheck = await getOwnerId();
+  // --- PERBAIKAN TYPE GUARD ---
+  if ("response" in authCheck) {
+    return authCheck.response;
+  }
+  const ownerId = authCheck.ownerId;
+  // -----------------------------
+
+  // 1. Ambil ID Venue dari Query Parameter
+  const { searchParams } = new URL(request.url);
+  const venueId = parseInt(searchParams.get("id") || "0", 10);
+
+  if (!venueId) {
+    return NextResponse.json(
+      { message: "Venue ID is missing or invalid." },
+      { status: 400 }
+    );
+  }
+
+  // 2. Cek kepemilikan
+  const existingVenue = await prisma.venue.findFirst({
+    where: { id: venueId, owner_id: ownerId },
+  });
+
+  if (!existingVenue) {
+    return NextResponse.json(
+      { message: "Venue not found or unauthorized to edit." },
+      { status: 404 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    // Pastikan selectedFacilities dalam body (dari frontend) sudah diubah menjadi array string
+    // jika form edit Anda mengirimnya dalam format yang berbeda, ini mungkin perlu disesuaikan.
+    const validatedData = formSchema.safeParse(body);
+
+    if (!validatedData.success) {
+      return NextResponse.json(
+        {
+          message: "Invalid input data for update.",
+          errors: validatedData.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const {
+      category,
+      selectedFacilities,
+      harga_per_jam,
+      tipe_sewa,
+      harga_per_hari,
+      ...dataToUpdate
+    } = validatedData.data;
+
+    // --- Konversi Harga ke Prisma.Decimal ---
+    const finalHargaPerJam =
+      harga_per_jam && tipe_sewa === "perjam" && harga_per_jam > 0
+        ? new Prisma.Decimal(harga_per_jam)
+        : null;
+    const finalHargaPerHari =
+      harga_per_hari && tipe_sewa === "perhari" && harga_per_hari > 0
+        ? new Prisma.Decimal(harga_per_hari)
+        : null;
+
+    // --- Logika Update Category (Re-sync) ---
+    const venueCategory = await prisma.category.upsert({
+      where: { nama_kategori: category },
+      update: {},
+      create: { nama_kategori: category },
+    });
+
+    // Gunakan transaction untuk memastikan atomisitas
+    await prisma.$transaction([
+      // Hapus relasi Category lama dan buat yang baru
+      prisma.venueCategory.deleteMany({ where: { venue_id: venueId } }),
+      prisma.venueCategory.create({
+        data: { venue_id: venueId, category_id: venueCategory.category_id },
+      }),
+
+      // Kelola Fasilitas (Re-sync: hapus semua yang lama, buat/hubungkan yang baru)
+      prisma.venueFacility.deleteMany({ where: { venue_id: venueId } }),
+      ...selectedFacilities.map((facilityName) =>
+        prisma.facility
+          .upsert({
+            where: { nama_fasilitas: String(facilityName) },
+            update: {},
+            create: { nama_fasilitas: String(facilityName) },
+          })
+          .then((facility) =>
+            prisma.venueFacility.create({
+              data: { venue_id: venueId, facility_id: facility.facility_id },
+            })
+          )
+      ),
+    ]);
+
+    const updatedVenue = await prisma.venue.update({
+      where: { id: venueId, owner_id: ownerId },
+      data: {
+        ...dataToUpdate,
+        harga_per_jam: finalHargaPerJam,
+        harga_per_hari: finalHargaPerHari,
+        tipe_sewa: tipe_sewa,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Venue '${updatedVenue.nama_ruangan}' berhasil diperbarui.`,
+        venue: updatedVenue,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error updating venue:", error);
+    return NextResponse.json(
+      { message: "Failed to update venue due to a server error." },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------
+// --- 4. DELETE HANDLER ---
+// ---------------------------
+export async function DELETE(request: NextRequest) {
+  const authCheck = await getOwnerId();
+  // --- PERBAIKAN TYPE GUARD ---
+  if ("response" in authCheck) {
+    return authCheck.response;
+  }
+  const ownerId = authCheck.ownerId;
+  // -----------------------------
+
+  // 1. Ambil ID Venue dari Query Parameter
+  const { searchParams } = new URL(request.url);
+  const venueId = parseInt(searchParams.get("id") || "0", 10);
+
+  if (!venueId) {
+    return NextResponse.json(
+      { message: "Venue ID is missing or invalid." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // 2. Cek kepemilikan sebelum menghapus
+    const existingVenue = await prisma.venue.findFirst({
+      where: { id: venueId, owner_id: ownerId },
+    });
+
+    if (!existingVenue) {
+      return NextResponse.json(
+        { message: "Venue not found or unauthorized to delete." },
+        { status: 404 }
+      );
+    }
+
+    // --- Lakukan Penghapusan dalam Transaksi ---
+    await prisma.$transaction([
+      prisma.venueFacility.deleteMany({ where: { venue_id: venueId } }),
+      prisma.venueCategory.deleteMany({ where: { venue_id: venueId } }),
+      prisma.venueImage.deleteMany({ where: { venue_id: venueId } }),
+      prisma.venue.delete({
+        where: { id: venueId },
+      }),
+    ]);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Venue (ID: ${venueId}) berhasil dihapus.`,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting venue:", error);
+    return NextResponse.json(
+      {
+        message:
+          "Failed to delete venue. Check related records (e.g., Bookings).",
+      },
       { status: 500 }
     );
   }

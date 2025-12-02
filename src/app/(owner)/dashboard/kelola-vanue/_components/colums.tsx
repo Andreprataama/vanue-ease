@@ -1,8 +1,9 @@
+// src/app/(owner)/dashboard/kelola-vanue/_components/colums.tsx
 "use client";
 
 import { formatRupiah } from "@/utils/currency";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,48 +13,150 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-export type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
+// --- TIPE DATA VANUE ---
+export type Venue = {
+  id: number;
+  nama_ruangan: string;
+  tipe_sewa: "perhari" | "perjam" | null;
+  harga_per_jam: string | number | null;
+  harga_per_hari: string | number | null;
+  kapasitas_maks: number | null;
+  is_published: boolean;
+  images: { image_url: string }[];
+  venueCategories: { category: { nama_kategori: string } }[];
 };
 
-export const columns: ColumnDef<Payment>[] = [
+// --- Fungsi Hapus Venue ---
+const deleteVenueAction = async (
+  venueId: number,
+  venueName: string,
+  router: any
+) => {
+  if (
+    !confirm(
+      `Apakah Anda yakin ingin menghapus Vanue: ${venueName}? Tindakan ini tidak dapat dibatalkan.`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    // Memanggil API DELETE dengan Query Parameter
+    const response = await fetch(`/api/vanue?id=${venueId}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      toast.success(`Vanue "${venueName}" berhasil dihapus.`);
+      // Refresh halaman untuk memperbarui data tabel
+      router.refresh();
+    } else {
+      const errorData = await response.json();
+      toast.error(errorData.message || "Gagal menghapus venue.");
+    }
+  } catch (error) {
+    console.error("Error menghapus venue:", error);
+    toast.error("Terjadi kesalahan jaringan atau server saat menghapus.");
+  }
+};
+
+export const columns: ColumnDef<Venue>[] = [
   {
-    accessorKey: "status",
-    header: "Status",
-  },
-  {
-    accessorKey: "email",
+    accessorKey: "nama_ruangan",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Email
+          Nama Vanue
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
-  },
-
-  {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-      const formatted = formatRupiah({ price: amount });
-      return <div className="text-right font-medium">{formatted}</div>;
+      const venue = row.original;
+      const imageUrl =
+        venue.images?.[0]?.image_url || "/assets/default_venue.jpg";
+
+      return (
+        <div className="flex items-center gap-3">
+          <img
+            src={imageUrl}
+            alt={venue.nama_ruangan}
+            className="size-10 object-cover rounded-md shadow-sm"
+          />
+          <div className="font-medium text-sm">{venue.nama_ruangan}</div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "tipe_sewa",
+    header: "Tipe Sewa",
+    cell: ({ row }) => {
+      const tipe = row.getValue("tipe_sewa") as "perhari" | "perjam" | null;
+      return (
+        <Badge variant="secondary" className="capitalize">
+          {tipe === "perhari"
+            ? "Per Hari"
+            : tipe === "perjam"
+            ? "Per Jam"
+            : "-"}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "harga_per_hari",
+    header: () => <div className="text-right">Harga</div>,
+    cell: ({ row }) => {
+      const venue = row.original;
+      const price =
+        venue.tipe_sewa === "perjam"
+          ? venue.harga_per_jam
+          : venue.harga_per_hari;
+      const unit = venue.tipe_sewa === "perjam" ? "/ Jam" : "/ Hari";
+
+      const priceValue = price ? parseFloat(String(price)) : 0;
+      const formattedPrice =
+        priceValue > 0
+          ? `${formatRupiah({ price: priceValue })} ${unit}`
+          : "Tidak Ditentukan";
+
+      return (
+        <div className="text-right font-medium text-sm">{formattedPrice}</div>
+      );
+    },
+  },
+  {
+    accessorKey: "is_published",
+    header: "Status Publikasi",
+    cell: ({ row }) => {
+      const isPublished = row.getValue("is_published") as boolean;
+      return (
+        <Badge
+          className={
+            isPublished
+              ? "bg-green-500 hover:bg-green-600 text-white"
+              : "bg-gray-500 hover:bg-gray-600 text-white"
+          }
+        >
+          {isPublished ? "Published" : "Draft"}
+        </Badge>
+      );
     },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const payment = row.original;
+      const router = useRouter();
+      const venue = row.original;
 
       return (
         <DropdownMenu>
@@ -64,15 +167,27 @@ export const columns: ColumnDef<Payment>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
-              Copy payment ID
-            </DropdownMenuItem>
+            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+
+            {/* Link untuk Edit */}
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/kelola-vanue/edit/${venue.id}`}>
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit Vanue
+              </Link>
+            </DropdownMenuItem>
+
+            {/* Aksi untuk Hapus */}
+            <DropdownMenuItem
+              onClick={() =>
+                deleteVenueAction(venue.id, venue.nama_ruangan, router)
+              }
+              className="text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20"
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              Hapus Vanue
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
