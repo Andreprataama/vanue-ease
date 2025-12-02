@@ -1,9 +1,11 @@
+// src/app/(owner)/dashboard/kelola-vanue/tambah-vanue/_components/TambahVanueMain.tsx
+
 "use client";
 
 import React, { useState, useCallback } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -25,14 +27,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "sonner"; //
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-// --- Zod Schema Definition (Harus sama dengan di route.ts) ---
+// --- Zod Schema Definition ---
 const formSchema = z
   .object({
-    // Section 1: Basic Info
     nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
     deskripsi_venue: z.string().min(1, "Deskripsi wajib diisi."),
     alamat_venue: z
@@ -40,7 +41,6 @@ const formSchema = z
       .min(1, "Alamat Google Maps wajib diisi.")
       .or(z.string().url("Alamat harus berupa link yang valid.")),
 
-    // Section 2: Capacity & Pricing
     kapasitas_maks: z.coerce.number().min(1, "Kapasitas minimum adalah 1."),
     category: z.string().min(1, "Kategori wajib dipilih."),
     tipe_sewa: z.enum(["perhari", "perjam"], {
@@ -49,13 +49,11 @@ const formSchema = z
     harga_per_jam: z.coerce.number().optional().nullable().default(null),
     harga_per_hari: z.coerce.number().optional().nullable().default(null),
 
-    // Section 4: Facilities and Rules
     fasilitas_kustom: z.string().optional(),
     selectedFacilities: z.array(z.string()).default([]),
     peraturan_venue: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    // Custom refinement untuk validasi harga
     if (
       data.tipe_sewa === "perjam" &&
       (!data.harga_per_jam || data.harga_per_jam <= 0)
@@ -79,7 +77,6 @@ const formSchema = z
   });
 
 type VanueFormValues = z.infer<typeof formSchema>;
-// --- End Zod Schema Definition ---
 
 const GALLERY_LABELS = ["FOTO UTAMA", "FOTO 2", "FOTO 3", "FOTO 4", "FOTO 5"];
 const FACILITIES_OPTIONS = [
@@ -93,17 +90,31 @@ const FACILITIES_OPTIONS = [
   "Akses Kursi Roda",
 ];
 
-// Component PhotoBox (Tidak berubah, hanya untuk UI)
+// --- Struktur State Baru untuk Gambar ---
+type GalleryItem = {
+  preview: string | null;
+  file: File | null;
+};
+
+// Komponen PhotoBox (Diperbarui untuk menerima GalleryItem)
 const PhotoBox = ({
   index,
   label,
   isMain = false,
-  galleryPreviews,
+  preview, // Mengambil preview langsung
   handleFileChange,
   handleDelete,
-}: any) => {
-  const preview = galleryPreviews[index];
-
+}: {
+  index: number;
+  label: string;
+  isMain?: boolean;
+  preview: string | null;
+  handleFileChange: (
+    event: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => void;
+  handleDelete: (index: number) => void;
+}) => {
   const widthClass = isMain ? "w-full" : "w-full";
   const aspectRatioClass = isMain
     ? "aspect-[3/2] h-64"
@@ -122,6 +133,7 @@ const PhotoBox = ({
       {preview ? (
         <>
           <img
+            // Ganti src dari galleryPreviews[index] ke prop preview
             src={preview}
             alt={label}
             className="w-full h-full object-contain"
@@ -151,8 +163,9 @@ const PhotoBox = ({
 };
 
 const TambahVanueMain = () => {
-  const [galleryPreviews, setGalleryPreviews] = useState<any[]>(
-    Array(5).fill(null)
+  // --- State diubah untuk menyimpan File object dan preview URL ---
+  const [galleryData, setGalleryData] = useState<GalleryItem[]>(
+    Array(5).fill({ preview: null, file: null })
   );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -176,54 +189,81 @@ const TambahVanueMain = () => {
 
   const watchTipeSewa = form.watch("tipe_sewa", "perhari");
 
+  // Logika untuk menangani file change
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
       const file = event.target.files?.[0];
-      const newPreviews = [...galleryPreviews];
+      const newGalleryData = [...galleryData]; // Gunakan state baru
 
       if (file) {
         if (!file.type.startsWith("image/")) {
           toast.error("Hanya file gambar yang diizinkan!");
           event.target.value = "";
-          newPreviews[index] = null;
-          setGalleryPreviews(newPreviews);
+          newGalleryData[index] = { preview: null, file: null };
+          setGalleryData(newGalleryData);
           return;
         }
 
         const reader = new FileReader();
         reader.onloadend = () => {
-          newPreviews[index] = reader.result;
-          setGalleryPreviews(newPreviews);
+          // Simpan kedua data: preview URL dan File object
+          newGalleryData[index] = { preview: reader.result as string, file };
+          setGalleryData(newGalleryData);
         };
         reader.readAsDataURL(file);
       } else {
-        newPreviews[index] = null;
-        setGalleryPreviews(newPreviews);
+        newGalleryData[index] = { preview: null, file: null };
+        setGalleryData(newGalleryData);
       }
     },
-    [galleryPreviews]
+    [galleryData]
   );
 
+  // Logika untuk menghapus gambar
   const handleDelete = useCallback((index: number) => {
-    setGalleryPreviews((prevPreviews) => {
-      const newPreviews = [...prevPreviews];
-      newPreviews[index] = null;
+    setGalleryData((prevData) => {
+      const newPreviews = [...prevData];
+      // Hapus File dan Preview
+      newPreviews[index] = { preview: null, file: null };
       return newPreviews;
     });
   }, []);
 
-  // --- LOGIKA SUBMIT MENGGUNAKAN FETCH KE API ENDPOINT BARU ---
+  // --- LOGIKA SUBMIT PENTING DENGAN FormData ---
   async function onSubmit(values: VanueFormValues) {
     setIsLoading(true);
 
     try {
-      // Panggil endpoint API Route Handler
+      // 1. Buat FormData
+      const formData = new FormData();
+
+      // 2. Tambahkan semua field teks/angka/select ke FormData
+      Object.entries(values).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          // Handle array of strings (misalnya selectedFacilities)
+          value.forEach((item) => formData.append(key, item));
+        } else if (value !== null && value !== undefined) {
+          // Konversi nilai angka/boolean (jika ada) ke string
+          formData.append(key, String(value));
+        } else {
+          // Tambahkan null fields (penting untuk harga_per_jam/hari yang mungkin null)
+          formData.append(key, "null");
+        }
+      });
+
+      // 3. Tambahkan File Gambar ke FormData
+      galleryData.forEach((data, index) => {
+        if (data.file) {
+          // Gunakan kunci unik dan sertakan nama file
+          formData.append(`image_${index}`, data.file, data.file.name);
+        }
+      });
+
+      // 4. Panggil endpoint API Route Handler dengan FormData
       const response = await fetch("/api/vanue", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
+        // JANGAN set Content-Type: multipart/form-data, biarkan browser yang mengaturnya
+        body: formData,
       });
 
       const result = await response.json();
@@ -232,7 +272,6 @@ const TambahVanueMain = () => {
         toast.success(result.message || "Venue berhasil ditambahkan!");
         router.push("/dashboard/kelola-vanue");
       } else {
-        // Tangani error dari API
         const errorMessage = result.message || "Gagal menambahkan venue.";
         toast.error(errorMessage);
         if (result.errors?.fieldErrors) {
@@ -265,11 +304,12 @@ const TambahVanueMain = () => {
                       Masukkan Foto terbaik Tempat Anda
                     </p>
                   </div>
+                  {/* Panggil PhotoBox dengan data dari state galleryData */}
                   <PhotoBox
                     index={0}
                     label={GALLERY_LABELS[0]}
                     isMain={true}
-                    galleryPreviews={galleryPreviews}
+                    preview={galleryData[0]?.preview}
                     handleFileChange={handleFileChange}
                     handleDelete={handleDelete}
                   />
@@ -280,16 +320,15 @@ const TambahVanueMain = () => {
                         key={index + 1}
                         index={index + 1}
                         label={label}
-                        galleryPreviews={galleryPreviews}
+                        preview={galleryData[index + 1]?.preview}
                         handleFileChange={handleFileChange}
                         handleDelete={handleDelete}
                       />
                     ))}
                   </div>
-                  {/* Anda perlu menyesuaikan kode untuk mengunggah file yang sebenarnya */}
                 </div>
 
-                {/* --- Deskripsi Vanue --- */}
+                {/* --- Deskripsi Vanue (Bagian ini tetap sama) --- */}
                 <div className="space-y-3 pt-4">
                   <div>
                     <Label className="text-xl font-semibold">
@@ -351,7 +390,7 @@ const TambahVanueMain = () => {
               </div>
 
               <div className="space-y-8">
-                {/* --- Harga dan Kapasitas --- */}
+                {/* --- Harga dan Kapasitas (Bagian ini tetap sama) --- */}
                 <div className="space-y-4">
                   <div className="">
                     <Label className="text-xl font-semibold">
@@ -463,7 +502,7 @@ const TambahVanueMain = () => {
                       )}
                     />
 
-                    {/* Input Harga */}
+                    {/* Input Harga (Conditional Rendering) */}
                     <div className="flex-1">
                       {watchTipeSewa === "perjam" ? (
                         <FormField
@@ -520,7 +559,7 @@ const TambahVanueMain = () => {
 
                 <div className="space-y-3 pt-4">
                   {/* --- Fasilitas (Checkboxes) --- */}
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-xl font-semibold">Fasilitas</Label>
                     <p className="text-xs text-gray-500">
                       Pilih fasilitas yang tersedia di tempat Anda
