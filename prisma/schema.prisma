@@ -1,0 +1,286 @@
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique @db.VarChar
+  emailVerified  Boolean        @default(false)
+  name           String?        @db.VarChar
+  image          String?
+  createdAt      DateTime       @default(now()) @db.Timestamp
+  updatedAt      DateTime       @updatedAt 
+  contact_number String?        @unique @db.VarChar 
+  accounts       Account[]
+  sessions       Session[]
+  
+  venues         Venue[]
+  blockedSlots   BlockedSlot[]  @relation("OwnerBlockedSlots")
+  priceRules     PriceRule[]
+  notifications  Notification[]
+  payoutDetail   PayoutDetail?
+
+  @@map("user")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([providerId, accountId])
+  @@map("account")
+  @@index([userId])
+}
+
+
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+  @@index([identifier])
+}
+
+
+
+model PayoutDetail {
+  id                  Int     @id @default(autoincrement())
+  partner_user_id     String  @unique
+  bank_name           String  @db.VarChar
+  account_number      String  @db.VarChar
+  account_holder_name String  @db.VarChar
+  is_verified         Boolean @default(false)
+  user                User    @relation(fields: [partner_user_id], references: [id])
+
+  @@map("payout_detail")
+}
+
+model Venue {
+  id             Int      @id @default(autoincrement())
+  owner_id       String
+  nama_ruangan   String   @db.VarChar
+  deskripsi_venue         String?  @db.Text       // <== Tambahan: Untuk menyimpan Deskripsi Vanue
+  kapasitas_maks          Int?                     // <== Tambahan: Untuk menyimpan Kapasitas Maksimum
+  fasilitas_kustom        String?  @db.Text       // <== Tambahan: Untuk menyimpan fasilitas kustom (textarea)
+  peraturan_venue         String?  @db.Text
+  alamat_venue   String?  @db.Text
+  tipe_sewa      String?  @db.VarChar
+  harga_per_jam  Decimal? @db.Decimal(10, 2)
+  harga_per_hari Decimal? @db.Decimal(10, 2)
+  is_published   Boolean  @default(false)
+  is_verified    Boolean  @default(false)
+
+  owner           User            @relation(fields: [owner_id], references: [id])
+  bookings        Booking[]
+  blockedSlots    BlockedSlot[]
+  priceRules      PriceRule[]
+  images          VenueImage[]
+  reviews         Review[]
+  venueCategories VenueCategory[]
+  venueFacilities VenueFacility[]
+
+  @@index([owner_id])
+}
+
+model BlockedSlot {
+  block_id            Int       @id @default(autoincrement())
+  venue_id            Int
+  tanggal_mulai       DateTime  @db.Date
+  tanggal_akhir       DateTime? @db.Date
+  jam_mulai           DateTime? @db.Time
+  jam_akhir           DateTime? @db.Time
+  alasan_block        String?   @db.VarChar
+  blocked_by_owner_id String
+
+  venue          Venue @relation(fields: [venue_id], references: [id])
+  blockedByOwner User  @relation("OwnerBlockedSlots", fields: [blocked_by_owner_id], references: [id])
+
+  @@index([venue_id])
+  @@index([blocked_by_owner_id])
+}
+
+model PriceRule {
+  rule_id                 Int      @id @default(autoincrement())
+  venue_id                Int
+  tanggal_mulai           DateTime @db.Date
+  tanggal_akhir           DateTime @db.Date
+  harga_override_per_jam  Decimal? @db.Decimal(10, 2)
+  harga_override_per_hari Decimal? @db.Decimal(10, 2)
+  alasan                  String?  @db.VarChar
+  created_by_owner_id     String
+
+  venue          Venue @relation(fields: [venue_id], references: [id])
+  createdByOwner User  @relation(fields: [created_by_owner_id], references: [id])
+
+  @@index([venue_id])
+  @@index([created_by_owner_id])
+}
+
+model Category {
+  category_id   Int    @id @default(autoincrement())
+  nama_kategori String @unique @db.VarChar
+
+  venueCategories VenueCategory[]
+}
+
+model VenueCategory {
+  venue_category_id Int @id @default(autoincrement())
+  venue_id          Int
+  category_id       Int
+
+  venue    Venue    @relation(fields: [venue_id], references: [id])
+  category Category @relation(fields: [category_id], references: [category_id])
+
+  @@unique([venue_id, category_id])
+  @@index([venue_id])
+  @@index([category_id])
+}
+
+model Facility {
+  facility_id    Int    @id @default(autoincrement())
+  nama_fasilitas String @unique @db.VarChar
+
+  venueFacilities VenueFacility[]
+}
+
+model VenueFacility {
+  venue_facility_id Int @id @default(autoincrement())
+  venue_id          Int
+  facility_id       Int
+
+  venue    Venue    @relation(fields: [venue_id], references: [id])
+  facility Facility @relation(fields: [facility_id], references: [facility_id])
+
+  @@unique([venue_id, facility_id])
+  @@index([venue_id])
+  @@index([facility_id])
+}
+
+model VenueImage {
+  image_id   Int      @id @default(autoincrement())
+  venue_id   Int
+  image_url  String   @db.VarChar
+  is_primary Boolean?
+  sort_order Int?
+
+  venue Venue @relation(fields: [venue_id], references: [id])
+
+  @@index([venue_id])
+}
+
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  owner_id        String
+  message         String   @db.Text
+  link_to         String?  @db.VarChar
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamp
+
+  owner User @relation(fields: [owner_id], references: [id])
+
+  @@index([owner_id])
+}
+
+model Booking {
+  booking_id      Int       @id @default(autoincrement())
+  venue_id        Int
+  kode_unik       String    @unique @db.VarChar
+  email_pemesan   String    @db.VarChar
+  telepon_pemesan String?   @db.VarChar
+  tanggal_mulai   DateTime  @db.Date
+  tanggal_akhir   DateTime? @db.Date
+  jam_mulai       DateTime? @db.Time
+  jam_akhir       DateTime? @db.Time
+  total_harga     Decimal   @db.Decimal(10, 2)
+  status_booking  String    @db.VarChar
+  is_manual       Boolean   @default(false)
+  booked_at       DateTime  @default(now()) @db.Timestamp
+  notes_pemesan   String?   @db.Text
+
+  venue   Venue            @relation(fields: [venue_id], references: [id])
+  payment Payment?
+  review  Review?
+  history BookingHistory[]
+
+  @@index([venue_id])
+}
+
+model Payment {
+  payment_id         Int       @id @default(autoincrement())
+  booking_id         Int       @unique
+  ref_pembayaran     String?   @db.VarChar
+  status_pembayaran  String?   @db.VarChar
+  jumlah_bayar       Decimal?  @db.Decimal(10, 2)
+  tanggal_pembayaran DateTime? @db.Timestamp
+
+  booking Booking @relation(fields: [booking_id], references: [booking_id])
+}
+
+model Review {
+  review_id     Int      @id @default(autoincrement())
+  venue_id      Int
+  booking_id    Int      @unique
+  nama_reviewer String?  @db.VarChar
+  rating        Int      @db.SmallInt
+  komentar      String?  @db.Text
+  created_at    DateTime @default(now()) @db.Timestamp
+
+  venue   Venue   @relation(fields: [venue_id], references: [id])
+  booking Booking @relation(fields: [booking_id], references: [booking_id])
+
+  @@index([venue_id])
+}
+
+model BookingHistory {
+  history_id Int      @id @default(autoincrement())
+  booking_id Int
+  old_status String?  @db.VarChar
+  new_status String   @db.VarChar
+  changed_by String?  @db.VarChar
+  changed_at DateTime @default(now()) @db.Timestamp
+
+  booking Booking @relation(fields: [booking_id], references: [booking_id])
+
+  @@index([booking_id])
+}
