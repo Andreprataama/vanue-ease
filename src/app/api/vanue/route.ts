@@ -14,7 +14,10 @@ const formSchema = z
       .string()
       .min(1, "Alamat Google Maps wajib diisi.")
       .or(z.string().url("Alamat harus berupa link yang valid.")),
-    kapasitas_maks: z.coerce.number().min(1, "Kapasitas minimum adalah 1."),
+    kapasitas_maks: z.coerce
+      .number()
+      .min(1)
+      .max(10000, "Kapasitas maksimal 10,000"),
     category: z.string().min(1, "Kategori wajib dipilih."),
     tipe_sewa: z.enum(["perhari", "perjam"]),
     harga_per_jam: z.coerce.number().optional().nullable().default(null),
@@ -49,7 +52,7 @@ const formSchema = z
 async function getOwnerId(): Promise<
   { ownerId: string } | { response: NextResponse }
 > {
-  const headersObj = await headers(); // Perbaikan: Await headers()
+  const headersObj = await headers();
   const session = await auth.api.getSession({ headers: headersObj });
 
   if (!session || !session.user || !session.user.id) {
@@ -270,6 +273,15 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Error creating venue:", error);
+    // Perbaikan: Gunakan type assertion untuk akses 'code' dan 'meta' dari Prisma error
+    if (error && typeof error === "object" && "code" in error) {
+      console.error(
+        "Prisma error code:",
+        (error as any).code,
+        "Meta:",
+        (error as any).meta
+      );
+    }
     return NextResponse.json(
       { message: "Failed to add venue due to a server error." },
       { status: 500 }

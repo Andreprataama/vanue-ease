@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -6,11 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Home, Users, ChevronRight, Tag } from "lucide-react";
+import { Home, Users, ChevronRight, Tag, Loader2 } from "lucide-react";
 import { formatRupiah } from "@/utils/currency";
 import { Badge } from "@/components/ui/badge";
 
-// --- TIPE DATA DARI API ---
 interface Venue {
   id: number;
   nama_ruangan: string;
@@ -24,8 +26,7 @@ interface Venue {
 
 // --- KOMPONEN CARD VANUE (Product Card) ---
 function VenueCard({ venue }: { venue: Venue }) {
-  // Mengambil URL gambar utama dari data fetched
-  // Catatan: is_primary=true diset di API Route
+  // Logika tampilan card tetap sama
   const imageUrl = venue.images[0]?.image_url || "/assets/default_venue.jpg";
   const categoryName =
     venue.venueCategories[0]?.category.nama_kategori || "Tidak Dikategorikan";
@@ -33,10 +34,9 @@ function VenueCard({ venue }: { venue: Venue }) {
     venue.tipe_sewa === "perjam" ? venue.harga_per_jam : venue.harga_per_hari;
   const priceUnit = venue.tipe_sewa === "perjam" ? "Jam" : "Hari";
 
-  // Format harga menggunakan utilitas yang sudah ada
   const formattedPrice = price
     ? formatRupiah({ price: Number(price) })
-    : "Harga Tidak Tersedia"; //
+    : "Harga Tidak Tersedia";
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-lg w-full">
@@ -82,33 +82,74 @@ function VenueCard({ venue }: { venue: Venue }) {
   );
 }
 
-async function fetchVenues(): Promise<Venue[]> {
-  try {
-    const response = await fetch("http://localhost:3000/api/vanue", {
-      method: "GET",
-      cache: "no-store", // Pastikan data selalu baru
-    });
+const DashboardMain = () => {
+  // State untuk menyimpan data venue
+  const [venues, setVenues] = useState<Venue[]>([]);
+  // State untuk mengelola loading
+  const [isLoading, setIsLoading] = useState(true);
+  // State untuk mengelola error (opsional)
+  const [error, setError] = useState<string | null>(null);
 
-    if (!response.ok) {
-      // Hanya log error, tidak crash aplikasi
-      console.error(
-        "Failed to fetch venues:",
-        response.status,
-        await response.text()
-      );
-      return [];
+  // Fungsi untuk melakukan fetching data
+  const fetchVenues = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/vanue", {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to fetch venues:", response.status, errorText);
+        // Tampilkan pesan error jika API gagal
+        setError("Gagal memuat data Vanue. Silakan coba lagi.");
+        setVenues([]);
+        return;
+      }
+
+      const result = await response.json();
+
+      // Pastikan format respons API Anda adalah { data: [...] }
+      if (result && Array.isArray(result.data)) {
+        setVenues(result.data);
+      } else {
+        // Jika respons valid tapi formatnya aneh
+        console.warn("API response format unexpected:", result);
+        setVenues([]);
+      }
+    } catch (err) {
+      console.error("Network or parsing error fetching venues:", err);
+      setError("Terjadi kesalahan jaringan.");
+      setVenues([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const result = await response.json();
-    return result.data || [];
-  } catch (error) {
-    console.error("Network or parsing error fetching venues:", error);
-    return [];
+  // useEffect untuk memicu fetching saat komponen pertama kali dimuat
+  useEffect(() => {
+    fetchVenues();
+  }, []); // Array kosong memastikan hanya berjalan sekali saat mount
+
+  // --- RENDERING TAMPILAN DASHBOARD ---
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 p-5 text-center">
+        <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Memuat data Vanue...</p>
+      </div>
+    );
   }
-}
 
-const DashboardMain = async () => {
-  const venues = await fetchVenues();
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 p-5 text-center text-red-500">
+        <p className="text-lg font-medium">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 p-5">
@@ -120,7 +161,6 @@ const DashboardMain = async () => {
           <p className="text-sm text-muted-foreground">Total Vanue</p>
           <div className="text-3xl font-bold">{venues.length}</div>
         </Card>
-        {/* Tambahkan stat card lainnya di sini */}
       </div>
 
       <h2 className="text-xl font-semibold mb-4">

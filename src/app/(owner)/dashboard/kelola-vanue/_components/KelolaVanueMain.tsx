@@ -1,84 +1,115 @@
-import { columns, Venue } from "./colums";
-import { DataTable } from "./data-table";
-import { cookies } from "next/headers";
+// FILE: app/dashboard/kelola-vanue/KelolaVenueMain.tsx
 
-async function fetchVenues(): Promise<Venue[]> {
-  console.log("[STATUS] Memulai proses fetchVenues...");
-  try {
-    const url = "/api/vanue";
+"use client";
 
-    // 1. Ambil objek CookiesStore
-    const cookieStore = cookies();
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { columns } from "./colums"; // Path ke kolom
+import { VenueDataTable } from "./data-table"; // Path ke DataTable
+import { Venue } from "@/type/venua"; // Import interface
 
-    // 2. Gunakan .getAll() untuk mendapatkan array of cookie objects.
-    const allCookies = cookieStore.getAll();
+const KelolaVenueMain = () => {
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // 3. Buat string header 'Cookie' yang lengkap secara manual: "name1=value1; name2=value2"
-    const cookieHeader = allCookies
-      .map((c) => `${c.name}=${c.value}`)
-      .join("; ");
+  const fetchVenues = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Mengambil data, cookies akan otomatis disertakan oleh browser
+      const response = await fetch("/api/vanue", { method: "GET" });
 
-    console.log(
-      `[DEBUG] Jumlah total cookie yang ditemukan: ${allCookies.length}`
-    );
-    console.log(
-      `[DEBUG] Header 'Cookie' yang Dibuat: ${cookieHeader.substring(0, 100)}${
-        cookieHeader.length > 100 ? "..." : ""
-      }`
-    );
-    // ------------------------------------
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Gagal memuat data Vanue.");
+      }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      const result = await response.json();
 
-    const headersConfig: HeadersInit = {
-      "cache-control": "no-store",
-    };
+      if (Array.isArray(result.data)) {
+        setVenues(result.data);
+      } else {
+        setVenues([]);
+      }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      setError("Terjadi kesalahan saat memuat data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // Hanya tambahkan header 'cookie' jika string tidak kosong
-    if (cookieHeader) {
-      headersConfig.cookie = cookieHeader;
+  const handleDelete = async (venueId: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus Vanue ini?")) {
+      return;
     }
 
-    const response = await fetch(`${baseUrl}${url}`, {
-      method: "GET",
-      // Teruskan headers yang sudah dimodifikasi (termasuk cookie sesi)
-      headers: headersConfig,
-      cache: "no-store",
-    });
+    try {
+      // Memanggil API DELETE dengan ID Vanue
+      const response = await fetch(`/api/vanue/${venueId}`, {
+        method: "DELETE",
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      // LOG ERROR JELAS
-      console.error(
-        `[ERROR] Gagal mengambil data venues: ${response.status} ${errorText}`
-      );
-      return [];
+      if (!response.ok) {
+        throw new Error("Gagal menghapus venue di server.");
+      }
+
+      // Jika berhasil, tampilkan pesan dan muat ulang data
+      alert("Vanue berhasil dihapus!");
+      fetchVenues();
+    } catch (error) {
+      console.error("Error deleting venue:", error);
+      alert("Gagal menghapus Vanue.");
     }
+  };
 
-    const result = await response.json();
+  useEffect(() => {
+    fetchVenues();
+  }, []); // Hanya berjalan sekali saat mount
 
-    console.log(
-      `[SUCCESS] Berhasil mengambil ${
-        result.data ? result.data.length : 0
-      } venues.`
+  // --- KONDISI RENDERING ---
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 p-5 text-center">
+        <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Memuat data Vanue...</p>
+      </div>
     );
-
-    return (result.data as Venue[]) || [];
-  } catch (error) {
-    console.error(
-      "[FATAL ERROR] Kesalahan jaringan atau parsing saat mengambil data venues:",
-      error
-    );
-    return [];
   }
-}
 
-export default async function KelolaVanueMain() {
-  const data = await fetchVenues();
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 p-5 text-center text-red-500">
+        {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto py-10 p-2">
-      <DataTable columns={columns} data={data} />
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Kelola Vanue</h1>
+        <Link href="/dashboard/kelola-vanue/tambah-vanue" passHref>
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Vanue
+          </Button>
+        </Link>
+      </div>
+
+      <VenueDataTable
+        columns={columns}
+        data={venues}
+        meta={{
+          onDelete: handleDelete, // Meneruskan handler delete ke tabel
+        }}
+      />
     </div>
   );
-}
+};
+
+export default KelolaVenueMain;
