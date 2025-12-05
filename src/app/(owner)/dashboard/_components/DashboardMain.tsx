@@ -9,9 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Home, Users, ChevronRight, Tag, Loader2 } from "lucide-react";
+import { Home, Users, Tag, Loader2 } from "lucide-react";
 import { formatRupiah } from "@/utils/currency";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 interface Venue {
   id: number;
@@ -71,12 +72,7 @@ function VenueCard({ venue }: { venue: Venue }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center">
-        <Link href={`/dashboard/kelola-vanue/edit/${venue.id}`} legacyBehavior>
-          <a className="text-sm text-primary hover:text-primary/80 font-medium flex items-center">
-            Lihat Detail
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </a>
-        </Link>
+        <Link href={`/dashboard/kelola-vanue/edit/${venue.id}`}></Link>
       </CardFooter>
     </Card>
   );

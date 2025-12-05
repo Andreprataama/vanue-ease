@@ -5,6 +5,8 @@ export interface Venue {
   harga_per_jam: number | null;
   harga_per_hari: number | null;
   kapasitas_maks: number | null;
+  // BARU: Tambahkan struktur images
+  images?: { image_url: string; is_primary?: boolean; sort_order?: number }[];
 }
 
 export interface VenueFormData {

@@ -1,9 +1,9 @@
-import { Main } from "./(user)/Beranda/page";
+import BantuanMain from "./_components/BantuanMain";
 
 const page = () => {
   return (
     <>
-      <Main />
+      <BantuanMain />;
     </>
   );
 };

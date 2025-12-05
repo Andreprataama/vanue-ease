@@ -1,5 +1,4 @@
 // FILE: app/dashboard/kelola-vanue/KelolaVenueMain.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,17 +8,32 @@ import Link from "next/link";
 import { columns } from "./colums"; // Path ke kolom
 import { VenueDataTable } from "./data-table"; // Path ke DataTable
 import { Venue } from "@/type/venua"; // Import interface
+// Import komponen AlertDialog
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const KelolaVenueMain = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // State untuk konfirmasi penghapusan
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [venueToDelete, setVenueToDelete] = useState<number | null>(null);
+
   const fetchVenues = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Mengambil data, cookies akan otomatis disertakan oleh browser
       const response = await fetch("/api/vanue", { method: "GET" });
 
       if (!response.ok) {
@@ -42,14 +56,21 @@ const KelolaVenueMain = () => {
     }
   };
 
-  const handleDelete = async (venueId: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Vanue ini?")) {
-      return;
-    }
+  // 1. Handler yang membuka modal konfirmasi
+  const handleOpenConfirm = (venueId: number) => {
+    setVenueToDelete(venueId);
+    setIsConfirmOpen(true);
+  };
+
+  // 2. Handler yang dipanggil setelah konfirmasi
+  const handleDeleteConfirmed = async () => {
+    if (venueToDelete === null) return;
+
+    setIsConfirmOpen(false); // Tutup modal
 
     try {
       // Memanggil API DELETE dengan ID Vanue
-      const response = await fetch(`/api/vanue/${venueId}`, {
+      const response = await fetch(`/api/vanue/${venueToDelete}`, {
         method: "DELETE",
       });
 
@@ -58,19 +79,19 @@ const KelolaVenueMain = () => {
       }
 
       // Jika berhasil, tampilkan pesan dan muat ulang data
-      alert("Vanue berhasil dihapus!");
+      toast.success("Vanue berhasil dihapus!");
       fetchVenues();
     } catch (error) {
       console.error("Error deleting venue:", error);
       alert("Gagal menghapus Vanue.");
+    } finally {
+      setVenueToDelete(null);
     }
   };
 
   useEffect(() => {
     fetchVenues();
   }, []); // Hanya berjalan sekali saat mount
-
-  // --- KONDISI RENDERING ---
 
   if (isLoading) {
     return (
@@ -105,9 +126,34 @@ const KelolaVenueMain = () => {
         columns={columns}
         data={venues}
         meta={{
-          onDelete: handleDelete, // Meneruskan handler delete ke tabel
+          onDelete: handleOpenConfirm, // Meneruskan handler BUKA MODAL
         }}
       />
+
+      {/* Komponen AlertDialog untuk Konfirmasi */}
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">
+              Konfirmasi Penghapusan
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus Vanue ini? Tindakan ini tidak
+              dapat dibatalkan dan data Vanue, termasuk semua gambar dan relasi,
+              akan dihapus secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirmed}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Ya, Hapus Permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

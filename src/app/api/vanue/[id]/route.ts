@@ -1,9 +1,56 @@
 import { NextResponse, NextRequest } from "next/server";
 import { headers } from "next/headers";
+import { z } from "zod";
 
 import prisma from "@/utils/prisma";
 import { auth } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
+import { supabase } from "@/utils/supabase"; // Wajib: Import klien Supabase
+
+// DEFINISI FORMSCHEMA (Diulang untuk PUT agar dapat diakses)
+
+const formSchema = z
+  .object({
+    nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
+    deskripsi_venue: z.string().min(1, "Deskripsi wajib diisi."),
+    alamat_venue: z
+      .string()
+      .min(1, "Alamat Google Maps wajib diisi.")
+      .or(z.string().url("Alamat harus berupa link yang valid.")),
+    kapasitas_maks: z.coerce
+      .number()
+      .min(1)
+      .max(10000, "Kapasitas maksimal 10,000"),
+    category: z.string().min(1, "Kategori wajib dipilih."),
+    tipe_sewa: z.enum(["perhari", "perjam"]),
+    harga_per_jam: z.coerce.number().optional().nullable().default(null),
+    harga_per_hari: z.coerce.number().optional().nullable().default(null),
+    fasilitas_kustom: z.string().optional().nullable(),
+    selectedFacilities: z.array(z.string()).default([]),
+    peraturan_venue: z.string().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.tipe_sewa === "perjam" &&
+      (!data.harga_per_jam || data.harga_per_jam <= 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["harga_per_jam"],
+        message: "Harga per Jam wajib diisi dan harus lebih dari 0.",
+      });
+    }
+    if (
+      data.tipe_sewa === "perhari" &&
+      (!data.harga_per_hari || data.harga_per_hari <= 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["harga_per_hari"],
+        message: "Harga per Hari wajib diisi dan harus lebih dari 0.",
+      });
+    }
+  });
 
 async function getOwnerId(): Promise<
   { ownerId: string } | { response: NextResponse }
@@ -24,11 +71,11 @@ async function getOwnerId(): Promise<
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } } // Menerima params yang berisi ID
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params; // Tambahkan ini!
+  const { id } = await params;
   const venueId = parseInt(id, 10);
-  // 2. VALIDASI ID
+
   if (isNaN(venueId) || venueId <= 0) {
     return NextResponse.json(
       { message: "Invalid Venue ID in path." },
@@ -36,7 +83,6 @@ export async function GET(
     );
   }
 
-  // 3. AUTENTIKASI (Panggil fungsi dinamis setelah ID didapat)
   const authCheck = await getOwnerId();
 
   if ("response" in authCheck) {
@@ -44,12 +90,11 @@ export async function GET(
   }
   const ownerId = authCheck.ownerId;
 
-  // 4. PENGAMBILAN DATA & OTORISASI (Prisma)
   try {
     const venue = await prisma.venue.findFirst({
       where: {
         id: venueId,
-        owner_id: ownerId, // KLAUSA OTORISASI Wajib
+        owner_id: ownerId,
       },
       select: {
         id: true,
@@ -64,9 +109,9 @@ export async function GET(
         fasilitas_kustom: true,
         is_published: true,
 
-        // Mengambil Relasi
         images: {
-          select: { image_url: true, is_primary: true },
+          select: { image_url: true, is_primary: true, sort_order: true },
+          orderBy: { sort_order: "asc" },
         },
         venueCategories: {
           select: { category: { select: { nama_kategori: true } } },
@@ -77,7 +122,6 @@ export async function GET(
       },
     });
 
-    // 5. CEK KEBERADAAN DATA
     if (!venue) {
       return NextResponse.json(
         { message: "Venue not found or unauthorized to view." },
@@ -85,11 +129,14 @@ export async function GET(
       );
     }
 
-    // 6. SERIALISASI DATA (Menangani Tipe Decimal)
     const serializedVenue = {
       ...venue,
-      harga_per_jam: venue.harga_per_jam?.toString() ?? null,
-      harga_per_hari: venue.harga_per_hari?.toString() ?? null,
+      harga_per_jam: venue.harga_per_jam
+        ? Number(venue.harga_per_jam.toString())
+        : null,
+      harga_per_hari: venue.harga_per_hari
+        ? Number(venue.harga_per_hari.toString())
+        : null,
 
       selectedFacilities: venue.venueFacilities.map(
         (vf) => vf.facility.nama_fasilitas
@@ -97,7 +144,6 @@ export async function GET(
       category: venue.venueCategories[0]?.category.nama_kategori || "",
     };
 
-    // 7. RESPON SUKSES
     return NextResponse.json(
       { success: true, data: serializedVenue },
       { status: 200 }
@@ -113,13 +159,11 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } } // Menerima params dari URL
+  { params }: { params: { id: string } }
 ) {
   const { id } = await params;
-  // 1. Ambil ID dari params
-  const venueId = parseInt(id, 10); // Pastikan menggunakan basis 10
+  const venueId = parseInt(id, 10);
 
-  // 2. Validasi ID
   if (isNaN(venueId) || venueId <= 0) {
     return NextResponse.json(
       { message: "Invalid Venue ID in path." },
@@ -127,47 +171,36 @@ export async function DELETE(
     );
   }
 
-  // 3. Autentikasi dan Otorisasi User
   const authCheck = await getOwnerId();
   if ("response" in authCheck) {
-    return authCheck.response; // Mengembalikan 401 Unauthorized jika sesi tidak valid
+    return authCheck.response;
   }
   const ownerId = authCheck.ownerId;
 
   try {
-    // A. Cek Kepemilikan
     const existingVenue = await prisma.venue.findFirst({
-      where: { id: venueId, owner_id: ownerId }, // Filter berdasarkan ID dan Owner ID
+      where: { id: venueId, owner_id: ownerId },
     });
 
     if (!existingVenue) {
-      // Jika venue tidak ditemukan ATAU tidak dimiliki oleh user, kembalikan 404
       return NextResponse.json(
         { message: "Venue not found or unauthorized to delete." },
         { status: 404 }
       );
     }
 
-    // B. Lakukan Penghapusan Transaksional
-    // Penting: Hapus semua relasi (Foreign Key) terlebih dahulu sebelum menghapus data utama (Venue)
     await prisma.$transaction([
       prisma.venueFacility.deleteMany({ where: { venue_id: venueId } }),
       prisma.venueCategory.deleteMany({ where: { venue_id: venueId } }),
       prisma.venueImage.deleteMany({ where: { venue_id: venueId } }),
-      // Hapus Venue utama (dipastikan milik owner yang benar)
       prisma.venue.delete({
         where: { id: venueId, owner_id: ownerId },
       }),
     ]);
 
-    // C. Respon Sukses
-    // Status 204 No Content adalah respons standar HTTP untuk DELETE yang sukses
-    // dan tidak mengembalikan konten apapun.
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting venue:", error);
-    // Jika terjadi error server (misalnya, ada relasi lain seperti Booking
-    // yang tidak terhapus), kembalikan 500.
     return NextResponse.json(
       {
         message:
@@ -185,7 +218,9 @@ export async function PUT(
   const authCheck = await getOwnerId();
   if ("response" in authCheck) return authCheck.response;
   const ownerId = authCheck.ownerId;
-  const venueId = parseInt(params.id, 10);
+
+  const { id } = await params;
+  const venueId = parseInt(id, 10);
 
   if (isNaN(venueId) || venueId <= 0)
     return NextResponse.json({ message: "Invalid Venue ID." }, { status: 400 });
@@ -200,8 +235,30 @@ export async function PUT(
     );
 
   try {
-    const body = await request.json();
-    const validatedData = formSchema.safeParse(body);
+    // MEMBACA FORM DATA (Ini adalah baris yang disorot, dan sudah benar)
+    const formData = await request.formData();
+    const rawData = Object.fromEntries(formData.entries());
+    const selectedFacilities = formData.getAll("selectedFacilities") || [];
+
+    // Persiapan data untuk validasi Zod (menghilangkan file/URL gambar sementara)
+    const dataToValidate: any = {
+      ...rawData,
+      selectedFacilities: selectedFacilities,
+      harga_per_jam:
+        rawData.harga_per_jam === "null" || rawData.harga_per_jam === ""
+          ? null
+          : rawData.harga_per_jam,
+      harga_per_hari:
+        rawData.harga_per_hari === "null" || rawData.harga_per_hari === ""
+          ? null
+          : rawData.harga_per_hari,
+    };
+    for (let i = 0; i < 5; i++) {
+      delete dataToValidate[`image_${i}`];
+    }
+
+    // Validasi Data Form
+    const validatedData = formSchema.safeParse(dataToValidate);
 
     if (!validatedData.success) {
       return NextResponse.json(
@@ -215,14 +272,92 @@ export async function PUT(
 
     const {
       category,
-      selectedFacilities,
+      selectedFacilities: validatedFacilities,
       harga_per_jam,
       tipe_sewa,
       harga_per_hari,
       ...dataToUpdate
     } = validatedData.data;
 
-    // Konversi Decimal
+    // --- 1. IMAGE PROCESSING (Upload to Supabase Storage) ---
+    const newImageLinks: {
+      image_url: string;
+      is_primary: boolean;
+      sort_order: number;
+    }[] = [];
+
+    const venueNameSlug = dataToUpdate.nama_ruangan
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
+    const bucketName = "venue-images";
+
+    for (let i = 0; i < 5; i++) {
+      const key = `image_${i}`;
+      const fileEntry = formData.get(key);
+
+      if (fileEntry instanceof File && fileEntry.size > 0) {
+        // KASUS 1: File BARU diupload -> Upload to Supabase
+
+        const fileBlob = fileEntry as Blob;
+        const filePath = `${ownerId}/${venueNameSlug}/${Date.now()}-${i}-${fileEntry.name.replace(
+          /\s/g,
+          "_"
+        )}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, fileBlob, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: fileEntry.type,
+          });
+
+        if (uploadError) {
+          console.error("Supabase Upload Error:", uploadError);
+          return NextResponse.json(
+            {
+              message: "Failed to upload image to storage.",
+              error: uploadError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        const permanentUrl = publicUrlData.publicUrl;
+
+        newImageLinks.push({
+          image_url: permanentUrl,
+          is_primary: i === 0,
+          sort_order: i,
+        });
+      } else if (
+        typeof fileEntry === "string" &&
+        (fileEntry.startsWith("http") ||
+          fileEntry.startsWith("/assets/default_venue.jpg"))
+      ) {
+        // KASUS 2: Old URL retained (Supabase URL or local default URL)
+        newImageLinks.push({
+          image_url: fileEntry,
+          is_primary: i === 0,
+          sort_order: i,
+        });
+      }
+    }
+
+    // Fallback: If all images were removed/no new images, use default.
+    if (newImageLinks.length === 0) {
+      newImageLinks.push({
+        image_url: "/assets/default_venue.jpg",
+        is_primary: true,
+        sort_order: 0,
+      });
+    }
+
+    // --- 2. Database Transaction for Data and Relationships ---
     const finalHargaPerJam =
       harga_per_jam && tipe_sewa === "perjam" && harga_per_jam > 0
         ? new Prisma.Decimal(harga_per_jam)
@@ -239,15 +374,27 @@ export async function PUT(
     });
 
     await prisma.$transaction(async (prisma) => {
-      // Hapus relasi lama
+      // a. Delete all old images and create new/retained ones
+      await prisma.venueImage.deleteMany({ where: { venue_id: venueId } });
+
+      await prisma.venueImage.createMany({
+        data: newImageLinks.map((img) => ({
+          venue_id: venueId,
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+        })),
+      });
+
+      // b. Delete and recreate category and facility relations
       await prisma.venueCategory.deleteMany({ where: { venue_id: venueId } });
       await prisma.venueFacility.deleteMany({ where: { venue_id: venueId } });
 
-      // Buat relasi baru
       await prisma.venueCategory.create({
         data: { venue_id: venueId, category_id: venueCategory.category_id },
       });
-      for (const facilityName of selectedFacilities) {
+
+      for (const facilityName of validatedFacilities) {
         const facility = await prisma.facility.upsert({
           where: { nama_fasilitas: String(facilityName) },
           update: {},
@@ -259,6 +406,7 @@ export async function PUT(
       }
     });
 
+    // --- 3. Update main Venue data ---
     const updatedVenue = await prisma.venue.update({
       where: { id: venueId, owner_id: ownerId },
       data: {

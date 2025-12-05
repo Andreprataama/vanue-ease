@@ -5,6 +5,7 @@ import { z } from "zod";
 import prisma from "@/utils/prisma";
 import { auth } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
+import { supabase } from "@/utils/supabase"; // Klien Supabase
 
 const formSchema = z
   .object({
@@ -73,7 +74,6 @@ export async function GET() {
     return authCheck.response;
   }
   const ownerId = authCheck.ownerId;
-  // -----------------------------------------------------------------------
 
   try {
     const venues = await prisma.venue.findMany({
@@ -98,7 +98,6 @@ export async function GET() {
       },
     });
 
-    // FIX: Map untuk mengonversi tipe Decimal Prisma menjadi String untuk serialisasi yang aman.
     const serializedVenues = venues.map((venue) => ({
       ...venue,
       harga_per_jam: venue.harga_per_jam?.toString() ?? null,
@@ -125,7 +124,6 @@ export async function POST(request: Request) {
     return authCheck.response;
   }
   const ownerId = authCheck.ownerId;
-  // -----------------------------
 
   try {
     const formData = await request.formData();
@@ -170,29 +168,55 @@ export async function POST(request: Request) {
       peraturan_venue,
     } = validatedData.data;
 
-    // --- Pemrosesan File Gambar (Simulasi Penyimpanan) ---
+    // --- Pemrosesan File Gambar (Integrasi Supabase Storage) ---
     const imageLinks: {
       image_url: string;
       is_primary: boolean;
       sort_order: number;
     }[] = [];
 
+    const venueNameSlug = nama_ruangan
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
+    const bucketName = "venue-images";
+
     for (let i = 0; i < 5; i++) {
       const key = `image_${i}`;
       const fileEntry = formData.get(key);
 
       if (fileEntry instanceof File && fileEntry.size > 0) {
-        // SIMULASI: Ganti ini dengan logika pengunggahan ke Cloud Storage.
-        const isPrimary = i === 0;
-        const filename = fileEntry.name.replace(/\s/g, "_");
-        const venueNameSlug = nama_ruangan
-          .replace(/[^a-z0-9]/gi, "_")
-          .toLowerCase();
-        const placeholderUrl = `/uploads/venue/${venueNameSlug}_${i}_${filename}`;
+        // --- LOGIKA UPLOAD SUPABASE ---
+        const fileBlob = fileEntry as Blob;
+        const filePath = `${ownerId}/${venueNameSlug}/${Date.now()}-${i}-${fileEntry.name.replace(
+          /\s/g,
+          "_"
+        )}`;
+
+        // 1. UPLOAD FILE
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, fileBlob, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: fileEntry.type,
+          });
+
+        if (uploadError) {
+          console.error("Supabase Upload Error:", uploadError);
+          throw new Error("Gagal mengunggah gambar ke penyimpanan.");
+        }
+
+        // 2. Dapatkan URL publik permanen
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        const permanentUrl = publicUrlData.publicUrl;
+        // --- AKHIR LOGIKA UPLOAD SUPABASE ---
 
         imageLinks.push({
-          image_url: placeholderUrl,
-          is_primary: isPrimary,
+          image_url: permanentUrl,
+          is_primary: i === 0,
           sort_order: i,
         });
       }
@@ -225,7 +249,6 @@ export async function POST(request: Request) {
 
     // --- Kelola Fasilitas (Upsert) ---
     const facilityConnects = [];
-    // Menggunakan validatedData.data.selectedFacilities
     for (const facilityName of validatedData.data.selectedFacilities) {
       const facility = await prisma.facility.upsert({
         where: { nama_fasilitas: String(facilityName) },
@@ -273,7 +296,6 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Error creating venue:", error);
-    // Perbaikan: Gunakan type assertion untuk akses 'code' dan 'meta' dari Prisma error
     if (error && typeof error === "object" && "code" in error) {
       console.error(
         "Prisma error code:",
@@ -291,7 +313,6 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const authCheck = await getOwnerId();
-  // --- PERBAIKAN TYPE GUARD ---
   if ("response" in authCheck) {
     return authCheck.response;
   }
@@ -324,8 +345,6 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
 
-    // Pastikan selectedFacilities dalam body (dari frontend) sudah diubah menjadi array string
-    // jika form edit Anda mengirimnya dalam format yang berbeda, ini mungkin perlu disesuaikan.
     const validatedData = formSchema.safeParse(body);
 
     if (!validatedData.success) {

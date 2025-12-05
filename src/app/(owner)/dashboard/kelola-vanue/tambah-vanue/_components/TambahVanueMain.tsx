@@ -88,13 +88,11 @@ const FACILITIES_OPTIONS = [
   "Akses Kursi Roda",
 ];
 
-// --- Struktur State Baru untuk Gambar ---
 type GalleryItem = {
   preview: string | null;
   file: File | null;
 };
 
-// Komponen PhotoBox (Diperbarui untuk menerima GalleryItem)
 const PhotoBox = ({
   index,
   label,
@@ -131,7 +129,6 @@ const PhotoBox = ({
       {preview ? (
         <>
           <img
-            // Ganti src dari galleryPreviews[index] ke prop preview
             src={preview}
             alt={label}
             className="w-full h-full object-contain"
