@@ -48,25 +48,25 @@ const Footer = () => {
             {/* Menu 1 : Sitemap */}
             <h4 className="mb-5 font-semibold text-lg">Sitemap</h4>
             <Link
-              href="#"
+              href="/"
               className="text-gray-400 hover:text-white transition"
             >
               Beranda
             </Link>
             <Link
-              href="#"
+              href="/Tempat"
               className="text-gray-400 hover:text-white transition"
             >
               Tempat
             </Link>
             <Link
-              href="#"
+              href="/Tentang-kami"
               className="text-gray-400 hover:text-white transition"
             >
               Tentang
             </Link>
             <Link
-              href="#"
+              href="/Kontak-kami"
               className="text-gray-400 hover:text-white transition"
             >
               Kontak
@@ -76,13 +76,13 @@ const Footer = () => {
           <div className="flex flex-col space-y-3">
             <h4 className="mb-5 font-semibold text-lg">Explorasi</h4>
             <Link
-              href="#"
+              href="/Tempat"
               className="text-gray-400 hover:text-white transition"
             >
               Semua Kategori
             </Link>
             <Link
-              href="#"
+              href="/"
               className="text-gray-400 hover:text-white transition"
             >
               Venue Populer
@@ -92,19 +92,19 @@ const Footer = () => {
           <div className="flex flex-col space-y-3">
             <h4 className="mb-5 font-semibold text-lg">Bantuan</h4>
             <Link
-              href="#"
+              href="/Bantuan"
               className="text-gray-400 hover:text-white transition"
             >
               Pusat Bantuan
             </Link>
             <Link
-              href="#"
+              href="/Kontak-kami"
               className="text-gray-400 hover:text-white transition"
             >
               Hubungi Kami
             </Link>
             <Link
-              href="#"
+              href="/Bantuan#BantuanFAQ"
               className="text-gray-400 hover:text-white transition"
             >
               FAQ

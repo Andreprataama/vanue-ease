@@ -184,7 +184,6 @@ const TambahVanueMain = () => {
 
   const watchTipeSewa = form.watch("tipe_sewa", "perhari");
 
-  // Logika untuk menangani file change
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
       const file = event.target.files?.[0];
@@ -440,22 +439,20 @@ const TambahVanueMain = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="resepsi">
-                              Ruang Pesta & Resepsi
+                            <SelectItem value="Ruang Meeting">
+                              Ruang Meeting
                             </SelectItem>
-                            <SelectItem value="olahraga">
-                              Fasilitas Olahraga
+                            <SelectItem value="Gedung & Aula">
+                              Gedung & Aula
                             </SelectItem>
-                            <SelectItem value="pameran">
-                              Event & Pameran
+                            <SelectItem value="Pesta & Gathering">
+                              Pesta & Gathering
                             </SelectItem>
-                            <SelectItem value="rapat">
-                              Ruang Rapat & Kerja
+                            <SelectItem value="Kafe & Restoran">
+                              Kafe & Restoran
                             </SelectItem>
-                            <SelectItem value="outdoor">
-                              Area Outdoor/Rooftop
-                            </SelectItem>
-                            <SelectItem value="studio">
+
+                            <SelectItem value="Studio & Kreatif">
                               Studio & Kreatif
                             </SelectItem>
                           </SelectContent>

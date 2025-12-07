@@ -1,14 +1,11 @@
-// FILE: app/dashboard/kelola-vanue/KelolaVenueMain.tsx
 "use client";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { columns } from "./colums"; // Path ke kolom
-import { VenueDataTable } from "./data-table"; // Path ke DataTable
-import { Venue } from "@/type/venua"; // Import interface
-// Import komponen AlertDialog
+import { columns } from "./colums";
+import { VenueDataTable } from "./data-table";
+import { Venue } from "@/type/venua";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,7 +123,7 @@ const KelolaVenueMain = () => {
         columns={columns}
         data={venues}
         meta={{
-          onDelete: handleOpenConfirm, // Meneruskan handler BUKA MODAL
+          onDelete: handleOpenConfirm,
         }}
       />
 

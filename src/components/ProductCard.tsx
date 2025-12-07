@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-
 import { HeartIcon, MapPin, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,19 +17,54 @@ import Image from "next/image";
 
 import { cn } from "@/utils/cn";
 import Link from "next/link";
+import { Venue } from "@/type/venua";
 
-const ProductCard = () => {
+interface ProductCardProps {
+  ruanganData: Venue;
+}
+
+const ProductCard = ({ ruanganData }: ProductCardProps) => {
   const [liked, setLiked] = useState<boolean>(false);
 
+  const {
+    id,
+    nama_ruangan,
+    deskripsi_venue = "Tidak ada deskripsi tersedia.",
+    alamat_venue = "Lokasi tidak tersedia.",
+    kapasitas_maks,
+    tipe_sewa,
+    harga_per_jam,
+    harga_per_hari,
+    images,
+    venueCategories,
+  } = ruanganData;
+
+  const imageUrl = images?.[0]?.image_url || "/images/placeholder.jpg";
+
+  const deskripsi = deskripsi_venue || "Tidak ada deskripsi tersedia.";
+
+  const kategoriNama =
+    venueCategories?.[0]?.category.nama_kategori || "Tidak Diketahui";
+
+  const hargaString = tipe_sewa === "perhari" ? harga_per_hari : harga_per_jam;
+  const hargaNumber = hargaString ? parseInt(hargaString) : null;
+
+  const hargaDisplay = hargaNumber
+    ? `Rp ${hargaNumber.toLocaleString("id-ID")}`
+    : "Hubungi";
+  const tipeSewaDisplay = tipe_sewa === "perhari" ? "/ Hari" : "/ Jam";
+
+  const detailUrl = `/Tempat/${id}`;
+
   return (
-    <div className="relative max-w-md rounded-xl bg-white  shadow-lg">
+    <div className="relative max-w-md rounded-xl bg-white shadow-lg">
       <div className="flex h-60 items-center justify-center ">
         <Image
-          src="https://images.unsplash.com/photo-1764609627878-4cb050c7c583?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          alt="Product Image"
+          src={imageUrl}
+          alt={nama_ruangan}
           width={300}
           height={300}
-          className="w-full overflow-hidden rounded-t-xl"
+          className="w-full overflow-hidden rounded-t-xl object-cover h-60"
         />
       </div>
       <Button
@@ -47,36 +81,37 @@ const ProductCard = () => {
       </Button>
       <Card className="border-none ">
         <CardHeader>
-          <CardTitle className="text-2xl">Ammbarukmo Plaza</CardTitle>
+          <CardTitle className="text-2xl truncate">{nama_ruangan}</CardTitle>
           <CardDescription className="flex flex-col gap-1">
             <Badge variant="outline" className="rounded-sm text-sm">
-              Meeting Room
+              {kategoriNama} {/* Data DInamis */}
             </Badge>
             <div className="flex items-center mt-2">
               <MapPin className="inline mr-1 h-4 w-4" />
-              <span>Bandung, Indonesia</span>
+              <span>{alamat_venue}</span> {/* Data DInamis */}
             </div>
             <div className="flex items-center mt-2">
               <User className="inline mr-1 h-4 w-4" />
-              <span>1 - jumlah Orang</span>
+              <span>{kapasitas_maks || "N/A"} Orang Maksimal</span>{" "}
+              {/* Data DInamis */}
             </div>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>
-            Tempat ini berguna untuk mengadakan meeting dengan fasilitas lengkap
-            dan nyaman.
+          <p className="line-clamp-2">
+            {deskripsi} {/* Data DInamis */}
           </p>
         </CardContent>
         <CardFooter className="justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
           <div className="flex flex-col">
             <span className="text-sm font-medium uppercase">Harga</span>
             <div className="flex flex-row justify-between items-baseline gap-1">
-              <span className="text-lg font-bold">Rp 500.000</span>
-              <span className="text-lg font-bold ">/ Hari</span>
+              <span className="text-lg font-bold">{hargaDisplay}</span>{" "}
+              {/* Data DInamis */}
+              <span className="text-lg font-bold ">{tipeSewaDisplay}</span>{" "}
             </div>
           </div>
-          <Link href={"/vanue/ammbarukmo-plaza"} className="mt-5">
+          <Link href={detailUrl} className="mt-5">
             <Button className="w-full">Lihat Detail</Button>
           </Link>
         </CardFooter>

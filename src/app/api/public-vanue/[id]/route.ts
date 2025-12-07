@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import prisma from "@/utils/prisma";
 
-export async function GET() {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const venues = await prisma.venue.findMany({
+    const { id } = await params;
+    const venueId = parseInt(id, 10);
+
+    if (isNaN(venueId) || venueId <= 0) {
+      return NextResponse.json(
+        { message: "Invalid Venue ID provided." },
+        { status: 400 }
+      );
+    }
+
+    const venues = await prisma.venue.findFirst({
+      where: { id: venueId },
       select: {
         id: true,
         nama_ruangan: true,
@@ -22,12 +36,17 @@ export async function GET() {
         deskripsi_venue: true,
         venueCategories: {
           select: { category: { select: { nama_kategori: true } } },
-          take: 1, // Ambil hanya satu kategori jika ada banyak
+          take: 1,
         },
       },
     });
 
-    console.log(`Successfully fetched ${venues.length} public venues.`);
+    if (!venues) {
+      return NextResponse.json(
+        { message: "Venue not found ." },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ success: true, data: venues }, { status: 200 });
   } catch (error) {

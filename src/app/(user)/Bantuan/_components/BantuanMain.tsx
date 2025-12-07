@@ -104,12 +104,11 @@ const FAQ_ITEMS = [
 interface HelpCardProps {
   title: string;
   description: string;
-  icon: React.ElementType; // Icon component from lucide-react
+  icon: React.ElementType;
   link: string;
 }
 
 const HelpCard = ({ title, description, icon: Icon, link }: HelpCardProps) => {
-  // Tentukan apakah link mengarah ke dashboard (memerlukan login)
   const isDashboardLink = link.includes("/dashboard");
 
   return (
@@ -179,7 +178,7 @@ const BantuanMain = () => {
 
       <Separator className="my-10" />
 
-      <div className="flex flex-col items-center">
+      <div id="BantuanFAQ" className="flex flex-col items-center">
         <Badge variant="default" className="bg-yellow-400 text-black mr-3">
           FAQ
         </Badge>
