@@ -26,12 +26,15 @@ export async function GET(
         harga_per_hari: true,
         kapasitas_maks: true,
         alamat_venue: true,
+
         images: {
-          where: { is_primary: true },
-          select: { image_url: true },
+          select: { image_url: true, sort_order: true, is_primary: true },
+          orderBy: { sort_order: "asc" },
         },
         venueFacilities: {
-          select: { facility: { select: { nama_fasilitas: true } } },
+          select: {
+            facility: { select: { facility_id: true, nama_fasilitas: true } },
+          },
         },
         deskripsi_venue: true,
         venueCategories: {

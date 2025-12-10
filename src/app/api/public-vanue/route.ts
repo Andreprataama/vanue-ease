@@ -17,12 +17,16 @@ export async function GET() {
           select: { image_url: true },
         },
         venueFacilities: {
-          select: { facility: { select: { nama_fasilitas: true } } },
+          select: {
+            facility: { select: { facility_id: true, nama_fasilitas: true } },
+          },
         },
         deskripsi_venue: true,
         venueCategories: {
-          select: { category: { select: { nama_kategori: true } } },
-          take: 1, // Ambil hanya satu kategori jika ada banyak
+          select: {
+            category: { select: { category_id: true, nama_kategori: true } },
+          },
+          take: 1,
         },
       },
     });

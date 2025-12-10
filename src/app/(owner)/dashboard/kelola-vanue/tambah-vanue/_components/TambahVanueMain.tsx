@@ -451,7 +451,6 @@ const TambahVanueMain = () => {
                             <SelectItem value="Kafe & Restoran">
                               Kafe & Restoran
                             </SelectItem>
-
                             <SelectItem value="Studio & Kreatif">
                               Studio & Kreatif
                             </SelectItem>

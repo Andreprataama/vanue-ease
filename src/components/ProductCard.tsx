@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { HeartIcon, MapPin, User } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +13,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import Image from "next/image";
-
 import { cn } from "@/utils/cn";
 import Link from "next/link";
 import { Venue } from "@/type/venua";

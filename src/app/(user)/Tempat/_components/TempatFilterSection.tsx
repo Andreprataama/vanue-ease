@@ -1,322 +1,426 @@
 "use client";
 
-import React from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/utils/cn";
+import useSWR from "swr";
+import ProductCard from "@/components/ProductCard";
+import { useState, useMemo, useEffect } from "react";
 import {
-  Filter,
-  ChevronDown,
-  Briefcase,
-  Building,
-  Users,
-  DollarSign,
-  MapPin,
-  Gauge,
-} from "lucide-react";
-import Link from "next/link";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
-// --- Data Filter Venue ---
-const filterOptions = [
-  {
-    id: "category",
-    name: "Kategori Venue",
-    options: [
-      { value: "meeting", label: "Ruang Meeting", icon: Briefcase },
-      { value: "hall", label: "Gedung & Aula", icon: Building },
-      { value: "party", label: "Pesta & Gathering", icon: Users },
-    ],
-  },
-  {
-    id: "harga",
-    name: "Tipe Harga",
-    options: [
-      { value: "perjam", label: "Per Jam", icon: DollarSign },
-      { value: "perhari", label: "Per Hari", icon: DollarSign },
-    ],
-  },
-  {
-    id: "kapasitas",
-    name: "Kapasitas",
-    // Data opsi lama dipertahankan, tetapi tidak akan dirender.
-    options: [
-      { value: "1-50", label: "1 - 50 Orang", icon: Users },
-      { value: "51-200", label: "51 - 200 Orang", icon: Users },
-    ],
-  },
+const categoryFiltersTab = [
+  { id: 1, value: "Ruang Meeting", label: "Ruang Meeting" },
+  { id: 2, value: "Gedung & Aula", label: "Gedung & Aula" },
+  { id: 3, value: "Pesta & Gathering", label: "Pesta & Gathering" },
+  { id: 4, value: "Kafe & Restoran", label: "Kafe & Restoran" },
+  { id: 5, value: "Studio & Kreatif", label: "Studio & Kreatif" },
 ];
 
-interface FilterGroupProps {
-  filter: (typeof filterOptions)[0];
-  isMobile?: boolean;
-}
+const sortOptions = [
+  { value: "nama_asc", label: "Nama A-Z" },
+  { value: "harga_rendah", label: "Harga Termurah" },
+  { value: "harga_tinggi", label: "Harga Termahal" },
+  { value: "kapasitas_desc", label: "Kapasitas Terbesar" },
+  { value: "terbaru", label: "Terbaru" },
+];
 
-const FilterGroup: React.FC<FilterGroupProps> = ({
-  filter,
-  isMobile = false,
-}) => {
+const sewaTypeOptions = [
+  { value: "perhari", label: "Per Hari" },
+  { value: "perjam", label: "Per Jam" },
+];
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+const ITEMS_PER_PAGE = 9;
+
+const TempatFilterSection = () => {
+  const { data } = useSWR(`/api/public-vanue`, fetcher);
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [sortBy, setSortBy] = useState("nama_asc");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSewaTypes, setSelectedSewaTypes] = useState<string[]>([]);
+
+  const [priceMinInput, setPriceMinInput] = useState("");
+  const [priceMaxInput, setPriceMaxInput] = useState("");
+  const [capacityMaxInput, setCapacityMaxInput] = useState("");
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    minPrice: 0,
+    maxPrice: Infinity,
+    maxCapacity: Infinity,
+  });
+
+  const handleCategoryChange = (categoryValue: string, isChecked: boolean) => {
+    setCurrentPage(1);
+    setSelectedCategories((prev) => {
+      if (isChecked) {
+        return [...prev, categoryValue];
+      } else {
+        return prev.filter((c) => c !== categoryValue);
+      }
+    });
+  };
+
+  const handleSewaTypeChange = (sewaType: string, isChecked: boolean) => {
+    setCurrentPage(1);
+    setSelectedSewaTypes((prev) => {
+      if (isChecked) {
+        return [...prev, sewaType];
+      } else {
+        return prev.filter((t) => t !== sewaType);
+      }
+    });
+  };
+
+  const handleApplyFilter = () => {
+    setCurrentPage(1);
+    setAppliedFilters({
+      minPrice: priceMinInput ? parseFloat(priceMinInput) : 0,
+      maxPrice: priceMaxInput ? parseFloat(priceMaxInput) : Infinity,
+      maxCapacity: capacityMaxInput ? parseFloat(capacityMaxInput) : Infinity,
+    });
+  };
+
+  const handleResetFilter = () => {
+    setCurrentPage(1);
+    setSelectedCategories([]);
+    setSelectedSewaTypes([]);
+    setPriceMinInput("");
+    setPriceMaxInput("");
+    setCapacityMaxInput("");
+    setAppliedFilters({
+      minPrice: 0,
+      maxPrice: Infinity,
+      maxCapacity: Infinity,
+    });
+  };
+
+  const getEffectivePrice = (venue: {
+    harga_per_hari: string;
+    harga_per_jam: string;
+  }) => {
+    let price = 0;
+    if (venue.harga_per_hari) {
+      price = parseFloat(venue.harga_per_hari);
+    } else if (venue.harga_per_jam) {
+      price = parseFloat(venue.harga_per_jam);
+    }
+    return isNaN(price) ? 0 : price;
+  };
+
+  const allProcessedVenues = useMemo(() => {
+    if (!data?.data || !Array.isArray(data.data)) return [];
+
+    let currentList = [...data.data];
+
+    if (selectedCategories.length > 0) {
+      currentList = currentList.filter((venue) => {
+        return venue.venueCategories.some(
+          (catObj: { category: { nama_kategori: string } }) =>
+            selectedCategories.includes(catObj.category.nama_kategori)
+        );
+      });
+    }
+
+    if (selectedSewaTypes.length > 0) {
+      currentList = currentList.filter((venue) => {
+        return selectedSewaTypes.includes(venue.tipe_sewa);
+      });
+    }
+
+    currentList = currentList.filter((venue) => {
+      const price = getEffectivePrice(venue);
+      const minOk = price >= appliedFilters.minPrice;
+      const maxOk = price <= appliedFilters.maxPrice;
+      return minOk && maxOk;
+    });
+
+    currentList = currentList.filter((venue) => {
+      const capacity = venue.kapasitas_maks || 0;
+      return capacity <= appliedFilters.maxCapacity;
+    });
+
+    const venues = currentList;
+
+    switch (sortBy) {
+      case "harga_rendah":
+        venues.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+        break;
+      case "harga_tinggi":
+        venues.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+        break;
+      case "nama_asc":
+        venues.sort((a, b) => {
+          const nameA = (a.nama_ruangan || "").toUpperCase();
+          const nameB = (b.nama_ruangan || "").toUpperCase();
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        });
+        break;
+      case "kapasitas_desc":
+        venues.sort(
+          (a, b) => (b.kapasitas_maks || 0) - (a.kapasitas_maks || 0)
+        );
+        break;
+      case "terbaru":
+        venues.sort((a, b) => b.id - a.id);
+        break;
+      default:
+        break;
+    }
+
+    return venues;
+  }, [data, sortBy, selectedCategories, appliedFilters, selectedSewaTypes]);
+
+  const totalItems = allProcessedVenues.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const sortedVenues = allProcessedVenues.slice(startIndex, endIndex);
+
   return (
-    <Accordion
-      type="single"
-      collapsible
-      defaultValue={filter.id}
-      className="w-full"
-    >
-      <AccordionItem
-        value={filter.id}
-        className={cn("py-3 border-none", isMobile ? "px-0" : "")}
-      >
-        <AccordionTrigger
-          className={cn(
-            "text-sm w-full items-center justify-between py-3 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300",
-            isMobile
-              ? "-mx-2 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              : "bg-transparent hover:bg-transparent"
-          )}
-        >
-          <span className="font-medium text-gray-900 dark:text-gray-100">
-            {filter.name}
-          </span>
-        </AccordionTrigger>
+    <div className="p-10 space-y-4 ">
+      <div className="flex justify-between border-b-2 border-gray-300 pb-4 ">
+        <h1 className="font-bold text-2xl">Temukan Vanue sesuai kebutuhanmu</h1>
+        <div>
+          <Select defaultValue={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Urutkan Berdasarkan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {sortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        <AccordionContent className="pt-4 pb-2">
-          <div className="space-y-4">
-            {/* ---------------------------------------------------- */}
-            {/* LOGIC UNTUK FILTER KAPASITAS (INPUT FIELD) */}
-            {/* ---------------------------------------------------- */}
-            {filter.id === "kapasitas" && (
-              <div className="space-y-3">
-                <Input
-                  type="number"
-                  placeholder="Min Kapasitas (Orang)"
-                  min={1}
-                />
-                <Input
-                  type="number"
-                  placeholder="Max Kapasitas (Orang)"
-                  min={1}
-                />
-              </div>
-            )}
+      <div className="flex flex-row w-full bg-white rounded-2xl border overflow-hidden ">
+        <div className="w-1/4 p-4 border ">
+          <h2 className="text-lg font-bold mb-4">Filter</h2>
+          <Accordion
+            type="multiple"
+            defaultValue={["kategori", "harga", "kapasitas"]}
+            className="w-full"
+          >
+            <AccordionItem value="kategori" className="border-b pb-5">
+              <AccordionTrigger className="font-medium hover:no-underline">
+                Kategori
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-2 space-y-3">
+                {categoryFiltersTab.map((option) => (
+                  <div
+                    key={option.value}
+                    className="flex items-center space-x-2"
+                  >
+                    <Checkbox
+                      id={`category-${option.value}`}
+                      checked={selectedCategories.includes(option.value)}
+                      onCheckedChange={(isChecked: boolean) =>
+                        handleCategoryChange(option.value, isChecked)
+                      }
+                    />
+                    <label
+                      htmlFor={`category-${option.value}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {option.label}
+                    </label>
+                  </div>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
 
-            {/* ---------------------------------------------------- */}
-            {/* LOGIC UNTUK FILTER HARGA (CHECKBOX + INPUT FIELD) */}
-            {/* ---------------------------------------------------- */}
-            {filter.id === "harga" && (
-              <>
-                <div className="space-y-3">
-                  {/* Checkboxes untuk Tipe Harga (Per Jam/Per Hari) */}
-                  {filter.options.map((option, optionIdx) => (
-                    <div key={option.value} className="flex items-center">
+            <AccordionItem value="harga" className="border-b pb-5">
+              <AccordionTrigger className="font-medium hover:no-underline">
+                Harga (Rp)
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-2 space-y-3">
+                <div className="flex space-x-2 mb-3">
+                  <Input
+                    type="number"
+                    name="hargaMin"
+                    placeholder="Harga Min"
+                    min="0"
+                    className="w-1/2"
+                    value={priceMinInput}
+                    onChange={(e) => setPriceMinInput(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    name="hargaMaks"
+                    placeholder="Harga Maks"
+                    min="0"
+                    className="w-1/2"
+                    value={priceMaxInput}
+                    onChange={(e) => setPriceMaxInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <p className="text-sm font-medium">Tipe Sewa</p>
+                  {sewaTypeOptions.map((option) => (
+                    <div
+                      key={option.value}
+                      className="flex items-center space-x-2"
+                    >
                       <Checkbox
-                        id={`filter-${isMobile ? "mobile-" : ""}${
-                          filter.id
-                        }-${optionIdx}`}
-                        name={`${filter.id}[]`}
-                        value={option.value}
-                        className="h-4 w-4 rounded border-gray-300 text-yellow-500"
+                        id={`sewa-${option.value}`}
+                        checked={selectedSewaTypes.includes(option.value)}
+                        onCheckedChange={(isChecked: boolean) =>
+                          handleSewaTypeChange(option.value, isChecked)
+                        }
                       />
-                      <Label
-                        htmlFor={`filter-${isMobile ? "mobile-" : ""}${
-                          filter.id
-                        }-${optionIdx}`}
-                        className="ml-3 text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
+                      <label
+                        htmlFor={`sewa-${option.value}`}
+                        className="text-sm font-medium"
                       >
                         {option.label}
-                      </Label>
+                      </label>
                     </div>
                   ))}
                 </div>
+              </AccordionContent>
+            </AccordionItem>
 
-                {/* Input Harga Min/Max (diberi jarak dari checkbox di atas) */}
-                <div className="pt-4 space-y-3 border-t border-gray-100 dark:border-gray-800">
-                  <Input type="number" placeholder="Harga Min (Rp)" min={0} />
-                  <Input type="number" placeholder="Harga Max (Rp)" min={0} />
-                </div>
-              </>
+            <AccordionItem value="kapasitas" className="border-b pb-5">
+              <AccordionTrigger className="font-medium hover:no-underline">
+                Kapasitas Maksimal
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-2">
+                <Input
+                  type="number"
+                  name="kapasitasMaks"
+                  placeholder="Maks. Orang"
+                  min="1"
+                  value={capacityMaxInput}
+                  onChange={(e) => setCapacityMaxInput(e.target.value)}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="fasilitas" className="border-b pb-5">
+              <AccordionTrigger className="font-medium hover:no-underline">
+                Fasilitas
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-2 space-y-3">
+                <p className="text-sm text-gray-500">
+                  Filter fasilitas belum terpasang.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="mt-6 space-y-2">
+            <Button className="w-full" onClick={handleApplyFilter}>
+              Apply Filter
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleResetFilter}
+            >
+              Reset Filter
+            </Button>
+          </div>
+        </div>
+
+        <div className="w-3/4 p-4  border">
+          <h2 className="text-xl font-semibold mb-4">
+            Daftar Tempat Vanue ({totalItems} total)
+          </h2>
+          <div className=" grid grid-cols-3 gap-10 ">
+            {sortedVenues.map((vanue) => (
+              <ProductCard key={vanue.id} ruanganData={vanue} />
+            ))}
+            {sortedVenues.length === 0 && (
+              <p className="text-gray-500 col-span-3">
+                Tidak ada venue yang cocok dengan kriteria filter.
+              </p>
             )}
-
-            {/* ---------------------------------------------------- */}
-            {/* LOGIC UNTUK FILTER KATEGORI (CHECKBOX) */}
-            {/* ---------------------------------------------------- */}
-            {filter.id === "category" &&
-              filter.options.map((option, optionIdx) => (
-                <div key={option.value} className="flex items-center">
-                  <Checkbox
-                    id={`filter-${isMobile ? "mobile-" : ""}${
-                      filter.id
-                    }-${optionIdx}`}
-                    name={`${filter.id}[]`}
-                    value={option.value}
-                    className="h-4 w-4 rounded border-gray-300 text-yellow-500"
-                  />
-                  <Label
-                    htmlFor={`filter-${isMobile ? "mobile-" : ""}${
-                      filter.id
-                    }-${optionIdx}`}
-                    className="ml-3 text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
-                  >
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
           </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-};
 
-const TempatFilterSection = () => {
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-
-  return (
-    <div className="bg-background">
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-baseline justify-between border-b border-gray-200 dark:border-gray-700 pt-10 pb-6">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-              Temukan Vanue sesuai kebutuhanmu
-            </h1>
-
-            <div className="flex items-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="group inline-flex justify-center text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-                  >
-                    Urutkan
-                    <ChevronDown
-                      className="-mr-1 ml-1 h-5 w-5  text-gray-400 group-hover:text-gray-500"
-                      aria-hidden="true"
+          {totalPages > 1 && (
+            <div className="jutify-center items-end">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-48 bg-card dark:bg-popover shadow-lg"
-                >
-                  <DropdownMenuItem>
-                    <Link href="#" className="w-full block">
-                      Paling Populer
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="#" className="w-full block">
-                      Terbaru
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="#" className="w-full block">
-                      Harga: Terendah
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </PaginationItem>
 
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="-m-2 ml-4 p-2 text-gray-400 hover:text-gray-500 sm:ml-6 lg:hidden"
-                >
-                  <span className="sr-only">Filters</span>
-                  <Filter className="size-5" />
-                </Button>
-              </SheetTrigger>
+                  {[...Array(totalPages)].map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(index + 1)}
+                        isActive={currentPage === index + 1}
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
-          </div>
-
-          <section aria-labelledby="products-heading" className="pt-6 pb-24">
-            <h2 id="products-heading" className="sr-only">
-              Daftar Venue
-            </h2>
-
-            <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
-              {/* Kolom Kiri: Filters Desktop */}
-              <form className="hidden lg:block">
-                {filterOptions.map((filter) => (
-                  <div
-                    key={filter.id}
-                    className="border-b border-gray-200 dark:border-gray-700 py-6"
-                  >
-                    {/* FilterGroup Desktop */}
-                    <FilterGroup filter={filter} />
-                  </div>
-                ))}
-
-                <Button className="w-full mt-6 bg-yellow-400 hover:bg-yellow-500 text-black">
-                  Terapkan Filter
-                </Button>
-              </form>
-
-              {/* Kolom Kanan: Product Grid */}
-              <div className="lg:col-span-3">
-                <div className="h-96 border-2 border-dashed flex items-center justify-center bg-gray-50 dark:bg-gray-800 text-muted-foreground rounded-lg">
-                  Tempat Grid Daftar Venue (Ganti dengan kartu venue Anda)
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        {/* Sheet Content (Mobile Dialog) */}
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-xs bg-white dark:bg-card overflow-y-auto p-0"
-        >
-          <div className="p-4">
-            <SheetHeader>
-              <SheetTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Filters
-              </SheetTitle>
-            </SheetHeader>
-
-            <form className="mt-4 border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
-              {filterOptions.map((filter) => (
-                <div
-                  key={filter.id}
-                  className="py-6 border-t border-gray-200 dark:border-gray-700"
-                >
-                  {/* FilterGroup Mobile */}
-                  <FilterGroup filter={filter} isMobile={true} />
-                </div>
-              ))}
-
-              <div className="pt-6">
-                <Button
-                  type="submit"
-                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-black"
-                >
-                  Terapkan Filter
-                </Button>
-              </div>
-            </form>
-          </div>
-        </SheetContent>
-      </Sheet>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
