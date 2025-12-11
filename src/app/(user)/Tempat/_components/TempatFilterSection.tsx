@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import useSWR from "swr";
+import useSWR, { Fetcher } from "swr";
 import ProductCard from "@/components/ProductCard";
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -28,6 +28,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Venue, ApiResponse } from "@/type/venua"; //
+import Link from "next/link";
 
 const categoryFiltersTab = [
   { id: 1, value: "Ruang Meeting", label: "Ruang Meeting" },
@@ -50,20 +53,28 @@ const sewaTypeOptions = [
   { value: "perjam", label: "Per Jam" },
 ];
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher: Fetcher<ApiResponse> = (url: string) =>
+  fetch(url).then((res) => res.json());
 
 const ITEMS_PER_PAGE = 6;
 
 const TempatFilterSection = () => {
-  const { data } = useSWR(`/api/public-vanue`, fetcher);
+  const { data } = useSWR<ApiResponse>(`/api/public-vanue`, fetcher);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialCategoryParam = searchParams.get("kategori");
+  const initialCategories = useMemo(() => {
+    return initialCategoryParam
+      ? [decodeURIComponent(initialCategoryParam)]
+      : [];
+  }, [initialCategoryParam]);
 
   const [currentPage, setCurrentPage] = useState(1);
-
   const [sortBy, setSortBy] = useState("nama_asc");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] =
+    useState<string[]>(initialCategories);
   const [selectedSewaTypes, setSelectedSewaTypes] = useState<string[]>([]);
 
-  // STATE INPUT FILTER LOKAL
   const [priceMinInput, setPriceMinInput] = useState("");
   const [priceMaxInput, setPriceMaxInput] = useState("");
   const [capacityMaxInput, setCapacityMaxInput] = useState("");
@@ -75,6 +86,19 @@ const TempatFilterSection = () => {
     maxCapacity: Infinity,
     localSearchQuery: "",
   });
+
+  useEffect(() => {
+    const categoryParam = searchParams.get("kategori");
+    const decodedCategory = categoryParam
+      ? decodeURIComponent(categoryParam)
+      : null;
+
+    if (decodedCategory && selectedCategories.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedCategories([decodedCategory]);
+      setCurrentPage(1);
+    }
+  }, [searchParams, selectedCategories.length]);
 
   const handleCategoryChange = (categoryValue: string, isChecked: boolean) => {
     setCurrentPage(1);
@@ -104,7 +128,7 @@ const TempatFilterSection = () => {
       minPrice: priceMinInput ? parseFloat(priceMinInput) : 0,
       maxPrice: priceMaxInput ? parseFloat(priceMaxInput) : Infinity,
       maxCapacity: capacityMaxInput ? parseFloat(capacityMaxInput) : Infinity,
-      localSearchQuery: localSearchInput.trim().toLowerCase(), // <-- Terapkan Query
+      localSearchQuery: localSearchInput.trim().toLowerCase(),
     });
   };
 
@@ -123,11 +147,16 @@ const TempatFilterSection = () => {
       localSearchQuery: "",
     });
   };
+  const handleResetCategories = () => {
+    setCurrentPage(1);
+    setSelectedCategories([]);
+    const currentParams = new URLSearchParams(searchParams.toString());
 
-  const getEffectivePrice = (venue: {
-    harga_per_hari: string;
-    harga_per_jam: string;
-  }) => {
+    currentParams.delete("kategori");
+
+    router.push(`?${currentParams.toString()}#tempat`, { scroll: false });
+  };
+  const getEffectivePrice = (venue: Venue) => {
     let price = 0;
     if (venue.harga_per_hari) {
       price = parseFloat(venue.harga_per_hari);
@@ -137,15 +166,16 @@ const TempatFilterSection = () => {
     return isNaN(price) ? 0 : price;
   };
 
-  const allProcessedVenues = useMemo(() => {
+  const allProcessedVenues = useMemo<Venue[]>(() => {
     if (!data?.data || !Array.isArray(data.data)) return [];
 
-    let currentList = [...data.data];
+    let currentList: Venue[] = [...data.data];
 
     const localQuery = appliedFilters.localSearchQuery;
 
+    // FILTER 0: Pencarian Nama Lokal
     if (localQuery) {
-      currentList = currentList.filter((venue) => {
+      currentList = currentList.filter((venue: Venue) => {
         const name = (venue.nama_ruangan || "").toLowerCase();
         return name.includes(localQuery);
       });
@@ -153,37 +183,35 @@ const TempatFilterSection = () => {
 
     // FILTER 1: KATEGORI
     if (selectedCategories.length > 0) {
-      currentList = currentList.filter((venue) => {
-        return venue.venueCategories.some(
-          (catObj: { category: { nama_kategori: string } }) =>
-            selectedCategories.includes(catObj.category.nama_kategori)
+      currentList = currentList.filter((venue: Venue) => {
+        return venue.venueCategories.some((catObj) =>
+          selectedCategories.includes(catObj.category.nama_kategori)
         );
       });
     }
 
     // FILTER 2: TIPE SEWA
     if (selectedSewaTypes.length > 0) {
-      currentList = currentList.filter((venue) => {
-        return selectedSewaTypes.includes(venue.tipe_sewa);
+      currentList = currentList.filter((venue: Venue) => {
+        return venue.tipe_sewa && selectedSewaTypes.includes(venue.tipe_sewa);
       });
     }
 
-    // FILTER 3: HARGA MINIMUM & MAKSIMUM
-    currentList = currentList.filter((venue) => {
+    // FILTER 3 & 4: Harga dan Kapasitas
+    currentList = currentList.filter((venue: Venue) => {
       const price = getEffectivePrice(venue);
-      const minOk = price >= appliedFilters.minPrice;
-      const maxOk = price <= appliedFilters.maxPrice;
-      return minOk && maxOk;
-    });
-
-    // FILTER 4: KAPASITAS MAKSIMUM
-    currentList = currentList.filter((venue) => {
       const capacity = venue.kapasitas_maks || 0;
-      return capacity <= appliedFilters.maxCapacity;
+
+      const priceOk =
+        price >= appliedFilters.minPrice && price <= appliedFilters.maxPrice;
+      const capacityOk = capacity <= appliedFilters.maxCapacity;
+
+      return priceOk && capacityOk;
     });
 
     const venues = currentList;
 
+    // Logika Sorting
     switch (sortBy) {
       case "harga_rendah":
         venues.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
@@ -192,7 +220,7 @@ const TempatFilterSection = () => {
         venues.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
         break;
       case "nama_asc":
-        venues.sort((a, b) => {
+        venues.sort((a: Venue, b: Venue) => {
           const nameA = (a.nama_ruangan || "").toUpperCase();
           const nameB = (b.nama_ruangan || "").toUpperCase();
           if (nameA < nameB) return -1;
@@ -202,7 +230,8 @@ const TempatFilterSection = () => {
         break;
       case "kapasitas_desc":
         venues.sort(
-          (a, b) => (b.kapasitas_maks || 0) - (a.kapasitas_maks || 0)
+          (a: Venue, b: Venue) =>
+            (b.kapasitas_maks || 0) - (a.kapasitas_maks || 0)
         );
         break;
       case "terbaru":
@@ -230,7 +259,7 @@ const TempatFilterSection = () => {
   const sortedVenues = allProcessedVenues.slice(startIndex, endIndex);
 
   return (
-    <div className="p-10 space-y-4 ">
+    <div id="tempat" className="p-10 space-y-4 ">
       <div className="flex justify-between border-b-2 border-gray-300 pb-4 ">
         <h1 className="font-bold text-2xl">Temukan Vanue sesuai kebutuhanmu</h1>
         <div>
@@ -256,10 +285,10 @@ const TempatFilterSection = () => {
           <h2 className="text-lg font-bold mb-4">Filter</h2>
           <Accordion
             type="multiple"
-            defaultValue={["pencarian", "kategori", "harga", "kapasitas"]} // <-- Tambahkan "pencarian"
+            defaultValue={["pencarian", "kategori", "harga", "kapasitas"]}
             className="w-full"
           >
-            {/* PENCARIAN CEPAT (BARU) */}
+            {/* PENCARIAN CEPAT */}
             <AccordionItem value="pencarian" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Pencarian Nama
@@ -270,7 +299,6 @@ const TempatFilterSection = () => {
                   placeholder="Cari nama venue..."
                   value={localSearchInput}
                   onChange={(e) => setLocalSearchInput(e.target.value)}
-                  // NOTE: Apply filter harus ditekan untuk menerapkan pencarian ini
                 />
               </AccordionContent>
             </AccordionItem>
@@ -301,6 +329,16 @@ const TempatFilterSection = () => {
                     </label>
                   </div>
                 ))}
+                <div className="w-full flex justify-end items-end ">
+                  <Button
+                    onClick={handleResetCategories}
+                    className=" text-sm font-medium leading-none text-end hover:underline "
+                  >
+                    <span className="text-sm font-medium leading-none text-end w-full  justify-end ">
+                      Reset Kategori
+                    </span>
+                  </Button>
+                </div>
               </AccordionContent>
             </AccordionItem>
 
@@ -372,18 +410,6 @@ const TempatFilterSection = () => {
                 />
               </AccordionContent>
             </AccordionItem>
-
-            {/* Fasilitas */}
-            <AccordionItem value="fasilitas" className="border-b pb-5">
-              <AccordionTrigger className="font-medium hover:no-underline">
-                Fasilitas
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-2 space-y-3">
-                <p className="text-sm text-gray-500">
-                  Filter fasilitas belum terpasang.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
           </Accordion>
 
           <div className="mt-6 space-y-2">
@@ -409,7 +435,7 @@ const TempatFilterSection = () => {
               <ProductCard key={vanue.id} ruanganData={vanue} />
             ))}
             {sortedVenues.length === 0 && (
-              <p className="text-gray-500 col-span-3">
+              <p className=" col-span-3 text-yellow-400 flex items-center justify-center h-40">
                 Tidak ada venue yang cocok dengan kriteria filter.
               </p>
             )}

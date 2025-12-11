@@ -1,7 +1,7 @@
-// components/BerandaKategory.jsx
+// src/app/(user)/Beranda/_components/BerandaKategory.tsx
 
 import { Briefcase, Building, Users, Coffee, Palette } from "lucide-react";
-import Link from "next/link";
+import Link from "next/link"; // Import Link untuk navigasi
 
 const categories = [
   {
@@ -33,9 +33,10 @@ const BerandaKategory = () => {
         <h1 className="text-white text-2xl ml-2 font-extrabold">Kategori</h1>
         <div className="flex flex-row items-center">
           {categories.map((category) => (
+            // Mengarahkan ke /Tempat dengan query kategori
             <Link
               key={category.name}
-              href={`/tempat?kategori=${encodeURIComponent(category.name)}`}
+              href={`/Tempat?kategori=${encodeURIComponent(category.name)}`}
               passHref
             >
               <div className="items-center space-x-4 p-4 rounded-lg cursor-pointer mt-4">
