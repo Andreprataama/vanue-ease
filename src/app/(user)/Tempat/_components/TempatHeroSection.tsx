@@ -1,6 +1,4 @@
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 const TempatHeroSection = () => {
   return (
@@ -24,18 +22,6 @@ const TempatHeroSection = () => {
         <p className="text-md text-gray-300 mb-8 text-center max-w-lg">
           Jelajahi ribuan pilihan venue terbaik untuk acara apa pun.
         </p>
-
-        <div className="flex flex-col md:flex-row bg-white p-2 md:p-3 rounded-xl shadow-2xl max-w-3xl w-full gap-2">
-          <Input
-            type="text"
-            placeholder="Cari lokasi, nama venue, atau kata kunci..."
-            className="flex-1 border-none text-black placeholder:text-gray-500 h-10 md:h-12 focus:ring-0"
-          />
-
-          <Button className="bg-black  text-white font-semibold h-10 md:h-12 w-full md:w-auto px-6 ">
-            Cari Sekarang
-          </Button>
-        </div>
       </div>
     </section>
   );

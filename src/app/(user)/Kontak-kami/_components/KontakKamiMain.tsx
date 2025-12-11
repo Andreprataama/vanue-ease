@@ -9,8 +9,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import Image from "next/image";
 
+interface FormData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  message: string;
+  agreedToPrivacy: boolean;
+}
+
 const KontakKami = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
     phone: "",
@@ -19,20 +28,61 @@ const KontakKami = () => {
     agreedToPrivacy: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setFormData({
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      message: "",
-      agreedToPrivacy: false,
-    });
+    if (!formData.agreedToPrivacy) {
+      setStatusMessage("Harap setujui kebijakan privasi sebelum mengirim.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+
+    try {
+      const response = await fetch("/api/kontak", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        // SUKSES
+        setStatusMessage(
+          "✅ Pesan Anda telah berhasil terkirim. Kami akan menghubungi Anda segera!"
+        );
+
+        setFormData({
+          firstName: "",
+          lastName: "",
+          phone: "",
+          email: "",
+          message: "",
+          agreedToPrivacy: false,
+        });
+      } else {
+        const errorData = await response.json();
+        setStatusMessage(
+          `❌ Gagal mengirim pesan: ${
+            errorData.message || "Terjadi kesalahan server."
+          }`
+        );
+      }
+    } catch (error) {
+      // Gagal (Kesalahan Jaringan)
+      console.error("Error saat mengirim formulir:", error);
+      setStatusMessage("❌ Terjadi kesalahan jaringan. Coba lagi nanti.");
+    } finally {
+      setIsSubmitting(false); // Selesai loading
+    }
   };
 
-  const handleChange = (field: string, value: string | boolean) => {
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -61,6 +111,7 @@ const KontakKami = () => {
                     onChange={(e) => handleChange("firstName", e.target.value)}
                     className="border-border bg-card h-12 pl-10"
                     required
+                    disabled={isSubmitting} // Nonaktifkan saat mengirim
                   />
                 </div>
                 <div className="relative">
@@ -71,6 +122,7 @@ const KontakKami = () => {
                     onChange={(e) => handleChange("lastName", e.target.value)}
                     className="border-border bg-card h-12 pl-10"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -84,6 +136,7 @@ const KontakKami = () => {
                   onChange={(e) => handleChange("phone", e.target.value)}
                   className="border-border bg-card h-12 pl-10"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -96,6 +149,7 @@ const KontakKami = () => {
                   onChange={(e) => handleChange("email", e.target.value)}
                   className="border-border bg-card h-12 pl-10"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -106,6 +160,7 @@ const KontakKami = () => {
                   onChange={(e) => handleChange("message", e.target.value)}
                   className="border-border bg-card min-h-32 resize-none"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -114,8 +169,10 @@ const KontakKami = () => {
                   id="privacy"
                   checked={formData.agreedToPrivacy}
                   onCheckedChange={(checked) =>
-                    handleChange("agreedToPrivacy", checked)
+                    // Checkbox mengembalikan boolean atau string, kita asumsikan boolean di sini
+                    handleChange("agreedToPrivacy", !!checked)
                   }
+                  disabled={isSubmitting}
                 />
                 <label
                   htmlFor="privacy"
@@ -128,8 +185,26 @@ const KontakKami = () => {
                 </label>
               </div>
 
-              <Button type="submit" size="lg">
-                Send Your Message
+              {/* Bagian untuk menampilkan pesan status (sukses/gagal/error validasi) */}
+              {statusMessage && (
+                <div
+                  className={`p-4 rounded-lg text-sm ${
+                    statusMessage.startsWith("✅")
+                      ? "bg-green-100 text-green-700 border border-green-300"
+                      : "bg-red-100 text-red-700 border border-red-300"
+                  }`}
+                  role="alert"
+                >
+                  {statusMessage}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="lg"
+                disabled={isSubmitting || !formData.agreedToPrivacy}
+              >
+                {isSubmitting ? "Mengirim Pesan..." : "Kirim Pesan Anda"}
               </Button>
             </form>
           </div>

@@ -52,7 +52,7 @@ const sewaTypeOptions = [
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 6;
 
 const TempatFilterSection = () => {
   const { data } = useSWR(`/api/public-vanue`, fetcher);
@@ -63,14 +63,17 @@ const TempatFilterSection = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSewaTypes, setSelectedSewaTypes] = useState<string[]>([]);
 
+  // STATE INPUT FILTER LOKAL
   const [priceMinInput, setPriceMinInput] = useState("");
   const [priceMaxInput, setPriceMaxInput] = useState("");
   const [capacityMaxInput, setCapacityMaxInput] = useState("");
+  const [localSearchInput, setLocalSearchInput] = useState("");
 
   const [appliedFilters, setAppliedFilters] = useState({
     minPrice: 0,
     maxPrice: Infinity,
     maxCapacity: Infinity,
+    localSearchQuery: "",
   });
 
   const handleCategoryChange = (categoryValue: string, isChecked: boolean) => {
@@ -101,6 +104,7 @@ const TempatFilterSection = () => {
       minPrice: priceMinInput ? parseFloat(priceMinInput) : 0,
       maxPrice: priceMaxInput ? parseFloat(priceMaxInput) : Infinity,
       maxCapacity: capacityMaxInput ? parseFloat(capacityMaxInput) : Infinity,
+      localSearchQuery: localSearchInput.trim().toLowerCase(), // <-- Terapkan Query
     });
   };
 
@@ -111,10 +115,12 @@ const TempatFilterSection = () => {
     setPriceMinInput("");
     setPriceMaxInput("");
     setCapacityMaxInput("");
+    setLocalSearchInput("");
     setAppliedFilters({
       minPrice: 0,
       maxPrice: Infinity,
       maxCapacity: Infinity,
+      localSearchQuery: "",
     });
   };
 
@@ -136,6 +142,16 @@ const TempatFilterSection = () => {
 
     let currentList = [...data.data];
 
+    const localQuery = appliedFilters.localSearchQuery;
+
+    if (localQuery) {
+      currentList = currentList.filter((venue) => {
+        const name = (venue.nama_ruangan || "").toLowerCase();
+        return name.includes(localQuery);
+      });
+    }
+
+    // FILTER 1: KATEGORI
     if (selectedCategories.length > 0) {
       currentList = currentList.filter((venue) => {
         return venue.venueCategories.some(
@@ -145,12 +161,14 @@ const TempatFilterSection = () => {
       });
     }
 
+    // FILTER 2: TIPE SEWA
     if (selectedSewaTypes.length > 0) {
       currentList = currentList.filter((venue) => {
         return selectedSewaTypes.includes(venue.tipe_sewa);
       });
     }
 
+    // FILTER 3: HARGA MINIMUM & MAKSIMUM
     currentList = currentList.filter((venue) => {
       const price = getEffectivePrice(venue);
       const minOk = price >= appliedFilters.minPrice;
@@ -158,6 +176,7 @@ const TempatFilterSection = () => {
       return minOk && maxOk;
     });
 
+    // FILTER 4: KAPASITAS MAKSIMUM
     currentList = currentList.filter((venue) => {
       const capacity = venue.kapasitas_maks || 0;
       return capacity <= appliedFilters.maxCapacity;
@@ -201,6 +220,7 @@ const TempatFilterSection = () => {
 
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
@@ -236,9 +256,26 @@ const TempatFilterSection = () => {
           <h2 className="text-lg font-bold mb-4">Filter</h2>
           <Accordion
             type="multiple"
-            defaultValue={["kategori", "harga", "kapasitas"]}
+            defaultValue={["pencarian", "kategori", "harga", "kapasitas"]} // <-- Tambahkan "pencarian"
             className="w-full"
           >
+            {/* PENCARIAN CEPAT (BARU) */}
+            <AccordionItem value="pencarian" className="border-b pb-5">
+              <AccordionTrigger className="font-medium hover:no-underline">
+                Pencarian Nama
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-2">
+                <Input
+                  type="text"
+                  placeholder="Cari nama venue..."
+                  value={localSearchInput}
+                  onChange={(e) => setLocalSearchInput(e.target.value)}
+                  // NOTE: Apply filter harus ditekan untuk menerapkan pencarian ini
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Kategori */}
             <AccordionItem value="kategori" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Kategori
@@ -267,6 +304,7 @@ const TempatFilterSection = () => {
               </AccordionContent>
             </AccordionItem>
 
+            {/* Harga */}
             <AccordionItem value="harga" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Harga (Rp)
@@ -318,6 +356,7 @@ const TempatFilterSection = () => {
               </AccordionContent>
             </AccordionItem>
 
+            {/* Kapasitas */}
             <AccordionItem value="kapasitas" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Kapasitas Maksimal
@@ -334,6 +373,7 @@ const TempatFilterSection = () => {
               </AccordionContent>
             </AccordionItem>
 
+            {/* Fasilitas */}
             <AccordionItem value="fasilitas" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Fasilitas

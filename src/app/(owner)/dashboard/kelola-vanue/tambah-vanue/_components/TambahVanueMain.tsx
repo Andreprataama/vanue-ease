@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 // --- Zod Schema Definition ---
 const formSchema = z
@@ -128,8 +129,9 @@ const PhotoBox = ({
     >
       {preview ? (
         <>
-          <img
+          <Image
             src={preview}
+            fill
             alt={label}
             className="w-full h-full object-contain"
           />
