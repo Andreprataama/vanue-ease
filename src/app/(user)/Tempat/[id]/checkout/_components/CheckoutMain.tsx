@@ -247,27 +247,27 @@ const CheckoutMain = ({ venueId }: CheckoutMainProps) => {
       }
 
       const snapToken = result.snapToken;
-
+      const orderId = result.orderId;
+      console.log("orderId yang didapat dari URL:", orderId);
       if (window.snap) {
         window.snap.pay(snapToken, {
           onSuccess: () => {
-            toast.success(
-              "Pembayaran berhasil! Cek email Anda untuk detail pesanan."
-            );
-            router.push("/dashboard/riwayat-pesanan");
+            toast.success("Pembayaran berhasil. Terima kasih.");
+            router.push(`/Pembayaran/success?order_id=${orderId}`);
           },
+
           onPending: () => {
-            toast.warning("Pembayaran tertunda. Selesaikan pembayaran Anda.");
-            router.push("/dashboard/riwayat-pesanan");
+            router.push(`/Pembayaran/pending?order_id=${orderId}`);
           },
           onError: () => {
             toast.error("Pembayaran gagal. Silakan coba lagi.");
+            router.push(`/Pembayaran/failure?order_id=${orderId}`);
           },
           onClose: () => {
             toast.info(
               "Anda menutup jendela pembayaran. Status pesanan Anda 'Pending Payment'."
             );
-            router.push("/dashboard/riwayat-pesanan");
+            router.push(`/Pembayaran/pending?order_id=${orderId}`);
           },
         });
       } else {

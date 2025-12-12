@@ -68,3 +68,29 @@ export interface ApiDetailResponse {
   success: boolean;
   data: VenueDetail | null; // Mengembalikan objek tunggal atau null
 }
+
+interface VenueData {
+  nama_ruangan: string;
+  alamat_venue: string;
+  tipe_sewa: string;
+}
+
+interface BookingApiResponseData {
+  booking_id: number;
+  kode_unik: string;
+  email_pemesan: string;
+  telepon_pemesan: string;
+  tanggal_mulai: string;
+  jam_mulai: string;
+  total_harga: number;
+  status_booking: "SUCCESS" | "PENDING" | "FAILURE";
+  status_midtrans: string | null;
+  notes_pemesan: string;
+  venue: VenueData;
+}
+
+interface VenueData {
+  nama_ruangan: string;
+  alamat_venue: string;
+  tipe_sewa: string;
+}
