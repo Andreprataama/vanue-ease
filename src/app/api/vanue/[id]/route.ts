@@ -7,8 +7,6 @@ import { auth } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
 import { supabase } from "@/utils/supabase"; // Wajib: Import klien Supabase
 
-// DEFINISI FORMSCHEMA (Diulang untuk PUT agar dapat diakses)
-
 const formSchema = z
   .object({
     nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
@@ -71,7 +69,7 @@ async function getOwnerId(): Promise<
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const venueId = parseInt(id, 10);
@@ -159,7 +157,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const venueId = parseInt(id, 10);
@@ -213,7 +211,7 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authCheck = await getOwnerId();
   if ("response" in authCheck) return authCheck.response;

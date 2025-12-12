@@ -8,12 +8,22 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+type BreadcrumbProps = {
+  pathname: string;
+};
+
+type Breadcrumb = {
+  href: string;
+  label: string;
+  isLast: boolean;
+};
+
 // Komponen Breadcrumb
-const BreadcrumbHeader = ({ pathname }) => {
+const BreadcrumbHeader = ({ pathname }: BreadcrumbProps) => {
   const pathSegments = pathname.split("/").filter(Boolean);
 
   let currentPath = "";
-  const breadcrumbs = [];
+  const breadcrumbs: Breadcrumb[] = [];
 
   const itemMap = new Map(
     sidebarItems.map((item) => [item.link, item.headers])
@@ -49,7 +59,7 @@ const BreadcrumbHeader = ({ pathname }) => {
 
   return (
     <div className="flex items-center space-x-2 text-sm">
-      {breadcrumbs.map((crumb, index) => (
+      {breadcrumbs.map((crumb) => (
         <div key={crumb.href} className="flex items-center">
           {crumb.isLast ? (
             // Item terakhir (aktif)

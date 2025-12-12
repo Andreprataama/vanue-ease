@@ -54,7 +54,7 @@ const KelolaVenueMain = () => {
   };
 
   // 1. Handler yang membuka modal konfirmasi
-  const handleOpenConfirm = (venueId: number) => {
+  const handleOpenConfirm = async (venueId: number) => {
     setVenueToDelete(venueId);
     setIsConfirmOpen(true);
   };

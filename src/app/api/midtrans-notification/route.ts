@@ -5,21 +5,38 @@ import prisma from "@/utils/prisma";
 // Pastikan tipe ini sesuai dengan Enum BookingStatus di schema.prisma Anda
 type BookingStatus = "PENDING" | "SUCCESS" | "EXPIRED" | "FAILURE";
 
-// Inisialisasi Midtrans Core API
-// Core API digunakan untuk memproses notifikasi (webhook) dan verifikasi keamanan
-const coreApi = new midtransClient.CoreApi({
-  // HARAP SESUAIKAN: Ambil dari environment variables
-  isProduction: process.env.NODE_ENV === "production",
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-});
-
 export async function POST(request: Request) {
   let orderId: string | null = null;
 
   try {
+    const serverKey = process.env.MIDTRANS_SERVER_KEY;
+    const clientKey = process.env.MIDTRANS_CLIENT_KEY;
+    if (!serverKey || !clientKey) {
+      throw new Error(
+        "MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY wajib di-set untuk memproses webhook"
+      );
+    }
+
+    // Inisialisasi Core API di dalam handler agar memakai env yang telah divalidasi
+    const coreApi = new midtransClient.CoreApi({
+      isProduction: process.env.NODE_ENV === "production",
+      serverKey,
+      clientKey,
+    });
+
     const body = await request.json();
     const notification = body;
-    const statusResponse = await coreApi.transaction.notification(notification);
+    const statusResponse = await (
+      coreApi as unknown as {
+        transaction: {
+          notification: (n: unknown) => Promise<{
+            order_id: string;
+            transaction_status: string;
+            fraud_status?: string;
+          }>;
+        };
+      }
+    ).transaction.notification(notification);
 
     orderId = statusResponse.order_id;
     const transactionStatus = statusResponse.transaction_status;
@@ -49,14 +66,12 @@ export async function POST(request: Request) {
 
     // 3. Update Status Booking di Database
     // Kita hanya melakukan update jika statusnya berubah dari PENDING
-    if (newBookingStatus !== "PENDING") {
+    if (orderId && newBookingStatus !== "PENDING") {
       // Pastikan field total_harga tidak di-update karena sudah benar sejak awal
       await prisma.booking.update({
         where: { kode_unik: orderId },
         data: {
           status_booking: newBookingStatus,
-          // Field opsional untuk menyimpan response mentah Midtrans untuk debugging
-          status_midtrans: JSON.stringify(statusResponse),
         },
       });
       console.log(

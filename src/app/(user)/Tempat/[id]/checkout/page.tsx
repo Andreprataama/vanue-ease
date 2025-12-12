@@ -1,4 +1,7 @@
 import CheckoutMain from "./_components/CheckoutMain";
+import { Suspense } from "react";
+
+export const dynamic = "force-dynamic";
 
 interface CheckoutPageProps {
   params: { id: string };
@@ -8,7 +11,9 @@ const page = async ({ params }: CheckoutPageProps) => {
 
   return (
     <>
-      <CheckoutMain venueId={id} />
+      <Suspense fallback={<div className="min-h-screen">Loading...</div>}>
+        <CheckoutMain venueId={id} />
+      </Suspense>
     </>
   );
 };

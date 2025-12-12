@@ -138,11 +138,20 @@ export async function POST(request: Request) {
       select: { booking_id: true, kode_unik: true },
     });
 
-    // 5. Buat Snap Transaction
+    // 5. Buat Snap Transaction (pastikan env tersedia)
+    const serverKey = process.env.MIDTRANS_SERVER_KEY;
+    const clientKey = process.env.MIDTRANS_CLIENT_KEY;
+
+    if (!serverKey || !clientKey) {
+      throw new Error(
+        "MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY wajib di-set"
+      );
+    }
+
     const snap = new midtransClient.Snap({
       isProduction: false, // Ganti ke true jika di Production
-      serverKey: process.env.MIDTRANS_SERVER_KEY,
-      clientKey: process.env.MIDTRANS_CLIENT_KEY,
+      serverKey,
+      clientKey,
     });
 
     // Item details untuk Midtrans Snap (terdiri dari 2 item)

@@ -1,12 +1,12 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/utils/prisma";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id; // <-- TIDAK pakai await
+    const { id } = await params;
     const venueId = parseInt(id, 10);
 
     if (isNaN(venueId) || venueId <= 0) {
@@ -26,22 +26,16 @@ export async function GET(
         harga_per_hari: true,
         kapasitas_maks: true,
         alamat_venue: true,
-
         images: {
           select: { image_url: true, sort_order: true, is_primary: true },
           orderBy: { sort_order: "asc" },
         },
-
         venueFacilities: {
           select: {
-            facility: {
-              select: { facility_id: true, nama_fasilitas: true },
-            },
+            facility: { select: { facility_id: true, nama_fasilitas: true } },
           },
         },
-
         deskripsi_venue: true,
-
         venueCategories: {
           select: { category: { select: { nama_kategori: true } } },
           take: 1,
@@ -60,7 +54,7 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching public venues:", error);
     return NextResponse.json(
-      { message: "Failed to fetch venue due to server error." },
+      { message: "Failed to fetch public venues due to a server error." },
       { status: 500 }
     );
   }

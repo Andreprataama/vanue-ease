@@ -1,20 +1,38 @@
 import ProductCard from "@/components/ProductCard";
-import { Venue, ApiResponse } from "@/type/venua";
+import { Venue } from "@/type/venua";
+import prisma from "@/utils/prisma";
 
 async function fetchAllVanues(): Promise<Venue[]> {
   try {
-    const apiUrl = "http://localhost:3000/api/public-vanue";
+    const venues = await prisma.venue.findMany({
+      select: {
+        id: true,
+        nama_ruangan: true,
+        tipe_sewa: true,
+        harga_per_jam: true,
+        harga_per_hari: true,
+        kapasitas_maks: true,
+        alamat_venue: true,
+        images: {
+          where: { is_primary: true },
+          select: { image_url: true },
+        },
+        venueFacilities: {
+          select: {
+            facility: { select: { facility_id: true, nama_fasilitas: true } },
+          },
+        },
+        deskripsi_venue: true,
+        venueCategories: {
+          select: {
+            category: { select: { category_id: true, nama_kategori: true } },
+          },
+          take: 1,
+        },
+      },
+    });
 
-    const response = await fetch(apiUrl, { cache: "no-store" });
-
-    if (!response.ok) {
-      console.error(`API Error: ${response.status} ${response.statusText}`);
-      return [];
-    }
-
-    const apiResponse: ApiResponse = await response.json();
-
-    return apiResponse.data || [];
+    return venues as Venue[];
   } catch (error) {
     console.error("Error fetching all vanues:", error);
     return [];

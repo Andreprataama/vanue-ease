@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type SubmitHandler, type Resolver } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -42,9 +42,7 @@ const formSchema = z
 
     kapasitas_maks: z.coerce.number().min(1, "Kapasitas minimum adalah 1."),
     category: z.string().min(1, "Kategori wajib dipilih."),
-    tipe_sewa: z.enum(["perhari", "perjam"], {
-      errorMap: () => ({ message: "Tipe sewa wajib dipilih." }),
-    }),
+    tipe_sewa: z.enum(["perhari", "perjam"]),
     harga_per_jam: z.coerce.number().optional().nullable().default(null),
     harga_per_hari: z.coerce.number().optional().nullable().default(null),
 
@@ -167,8 +165,12 @@ const TambahVanueMain = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const formResolver = zodResolver(
+    formSchema
+  ) as unknown as Resolver<VanueFormValues>;
+
   const form = useForm<VanueFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: formResolver,
     defaultValues: {
       nama_ruangan: "",
       deskripsi_venue: "",
@@ -226,7 +228,7 @@ const TambahVanueMain = () => {
   }, []);
 
   // --- LOGIKA SUBMIT PENTING DENGAN FormData ---
-  async function onSubmit(values: VanueFormValues) {
+  const onSubmit: SubmitHandler<VanueFormValues> = async (values) => {
     setIsLoading(true);
 
     try {
@@ -279,7 +281,7 @@ const TambahVanueMain = () => {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
   // --- AKHIR LOGIKA SUBMIT API ---
 
   return (

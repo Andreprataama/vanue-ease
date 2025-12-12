@@ -1,6 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+  type Resolver,
+  type SubmitHandler,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -8,10 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import { VenueFormData } from "@/type/venua"; // Import interface yang sudah disepakati
 
-// --- SCHEMA VALIDASI ZOD (Replikasi dari API Backend) ---
-// Ini harus sama persis dengan yang ada di route handler Anda
 const formSchema = z
   .object({
     nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
@@ -58,6 +60,9 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Alias untuk kebutuhan props/form
+type VenueFormData = FormValues;
+
 // --- DEFINISI PROPS KOMPONEN ---
 interface VenueFormProps {
   defaultValues?: VenueFormData;
@@ -70,8 +75,12 @@ export const VenueForm = ({
   onSubmit,
   isEditing,
 }: VenueFormProps) => {
+  const formResolver = zodResolver(
+    formSchema
+  ) as unknown as Resolver<FormValues>;
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: formResolver,
     defaultValues: defaultValues
       ? {
           // Memastikan nilai-nilai numerik dan array terisi dengan benar saat edit
@@ -91,15 +100,17 @@ export const VenueForm = ({
     handleSubmit,
     register,
     formState: { errors, isSubmitting },
-    watch, // Untuk validasi bersyarat di tampilan
   } = form;
 
-  const tipeSewa = watch("tipe_sewa"); // Memantau perubahan Tipe Sewa
+  const tipeSewa = useWatch({
+    control: form.control,
+    name: "tipe_sewa",
+  }); // Memantau perubahan Tipe Sewa
 
   // --- RENDER FORM ---
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(onSubmit as SubmitHandler<FormValues>)}
       className="space-y-8 p-6 bg-white rounded-lg shadow-xl"
     >
       <h2 className="text-2xl font-bold text-gray-800 border-b pb-3">
@@ -240,9 +251,9 @@ export const VenueForm = ({
               className="mt-2"
               disabled={tipeSewa !== "perhari" && !isEditing}
             />
-            {errors.harga_perhari && (
+            {errors.harga_per_hari && (
               <p className="text-sm text-red-500 mt-1">
-                {errors.harga_perhari.message}
+                {errors.harga_per_hari.message}
               </p>
             )}
           </div>

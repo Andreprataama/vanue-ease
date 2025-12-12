@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { SubmitHandler, useForm, type Resolver } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,13 +29,22 @@ import {
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-// Import Prisma dan Venue Dihapus karena tidak digunakan langsung di sini
 
-// =================================================================
-// DUPLIKAT LOGIKA DARI TAMBAH VANUE MAIN (disesuaikan untuk EDIT)
-// =================================================================
+type FetchedVenue = {
+  nama_ruangan: string;
+  deskripsi_venue: string;
+  alamat_venue: string;
+  kapasitas_maks: number;
+  category: string;
+  tipe_sewa: string;
+  harga_per_jam: number | null;
+  harga_per_hari: number | null;
+  fasilitas_kustom?: string | null;
+  peraturan_venue?: string | null;
+  selectedFacilities?: string[];
+  images: { image_url: string; sort_order?: number; is_primary?: boolean }[];
+};
 
-// --- Zod Schema Definition (Harus sinkron dengan API POST/PUT) ---
 const formSchema = z
   .object({
     nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
@@ -46,9 +56,7 @@ const formSchema = z
 
     kapasitas_maks: z.coerce.number().min(1, "Kapasitas minimum adalah 1."),
     category: z.string().min(1, "Kategori wajib dipilih."),
-    tipe_sewa: z.enum(["perhari", "perjam"], {
-      errorMap: () => ({ message: "Tipe sewa wajib dipilih." }),
-    }),
+    tipe_sewa: z.string().min(1, "Tipe sewa wajib dipilih."),
     harga_per_jam: z.coerce.number().optional().nullable().default(null),
     harga_per_hari: z.coerce.number().optional().nullable().default(null),
 
@@ -128,7 +136,6 @@ const PhotoBox = React.memo(
 
     const displayUrl = item.previewUrl;
 
-    // Fallback image source if URL is missing or fails
     const srcToRender =
       displayUrl && displayUrl !== "/assets/default_venue.jpg"
         ? displayUrl
@@ -142,11 +149,13 @@ const PhotoBox = React.memo(
       >
         {displayUrl ? (
           <>
-            <img
+            <Image
               src={srcToRender}
               alt={label}
-              className="w-full h-full object-contain"
-              onError={(e) => {
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                 e.currentTarget.src = "/assets/default_venue.jpg";
               }}
             />
@@ -178,17 +187,13 @@ const PhotoBox = React.memo(
 );
 PhotoBox.displayName = "PhotoBox";
 
-// =================================================================
-// KOMPONEN HALAMAN EDIT
-// =================================================================
-
 const EditVenuePage = () => {
   const params = useParams();
   const router = useRouter();
   const venueId = params.id as string;
   const numericVenueId = parseInt(venueId, 10);
 
-  const [defaultData, setDefaultData] = useState<any>(null);
+  const [defaultData, setDefaultData] = useState<FetchedVenue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -197,11 +202,30 @@ const EditVenuePage = () => {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const initialValues: FormValues = useMemo(
+    () => ({
+      nama_ruangan: "",
+      deskripsi_venue: "",
+      alamat_venue: "",
+      kapasitas_maks: 1,
+      category: "resepsi",
+      tipe_sewa: "perhari",
+      harga_per_jam: null,
+      harga_per_hari: null,
+      fasilitas_kustom: "",
+      peraturan_venue: "",
+      selectedFacilities: [],
+    }),
+    []
+  );
+
+  const formResolver = zodResolver(
+    formSchema
+  ) as unknown as Resolver<FormValues>;
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: useMemo(() => {
-      return {} as FormValues;
-    }, []),
+    resolver: formResolver,
+    defaultValues: initialValues,
     values: defaultData
       ? {
           nama_ruangan: defaultData.nama_ruangan,
@@ -212,9 +236,9 @@ const EditVenuePage = () => {
           tipe_sewa: defaultData.tipe_sewa || "perhari",
           harga_per_jam: defaultData.harga_per_jam ?? null,
           harga_per_hari: defaultData.harga_per_hari ?? null,
-          fasilitas_kustom: defaultData.fasilitas_kustom || "",
-          peraturan_venue: defaultData.peraturan_venue || "",
-          selectedFacilities: defaultData.selectedFacilities || [],
+          fasilitas_kustom: defaultData.fasilitas_kustom ?? "",
+          peraturan_venue: defaultData.peraturan_venue ?? "",
+          selectedFacilities: defaultData.selectedFacilities ?? [],
         }
       : undefined,
   });
@@ -241,7 +265,7 @@ const EditVenuePage = () => {
         }
 
         const result = await response.json();
-        const fetchedData = result.data;
+        const fetchedData: FetchedVenue = result.data;
 
         // --- Inisialisasi State Gallery ---
         const initialGallery: ImageItem[] = Array(5).fill({
@@ -250,22 +274,20 @@ const EditVenuePage = () => {
           previewUrl: null,
         });
 
-        fetchedData.images.forEach(
-          (img: { image_url: string; sort_order?: number }) => {
-            const index =
-              img.sort_order ??
-              (img.is_primary
-                ? 0
-                : initialGallery.findIndex((item) => !item.imageUrl));
-            if (index >= 0 && index < 5) {
-              initialGallery[index] = {
-                imageUrl: img.image_url,
-                newFile: null,
-                previewUrl: img.image_url,
-              };
-            }
+        fetchedData.images.forEach((img) => {
+          const index =
+            img.sort_order ??
+            (img.is_primary
+              ? 0
+              : initialGallery.findIndex((item) => !item.imageUrl));
+          if (index >= 0 && index < 5) {
+            initialGallery[index] = {
+              imageUrl: img.image_url,
+              newFile: null,
+              previewUrl: img.image_url,
+            };
           }
-        );
+        });
 
         setGalleryData(initialGallery);
         setDefaultData(fetchedData);
@@ -317,7 +339,7 @@ const EditVenuePage = () => {
   }, []);
 
   // --- 3. SUBMIT HANDLER (Menggunakan FormData) ---
-  const handleUpdate = async (values: FormValues) => {
+  const handleUpdate: SubmitHandler<FormValues> = async (values) => {
     setIsSubmitting(true);
 
     try {
@@ -362,7 +384,7 @@ const EditVenuePage = () => {
           try {
             const errorBody = JSON.parse(responseText);
             errorMessage = errorBody.message || errorMessage;
-          } catch (e) {
+          } catch {
             errorMessage = `Server Error: ${responseText.substring(0, 100)}...`;
           }
         }
@@ -371,9 +393,10 @@ const EditVenuePage = () => {
 
       toast.success(`Venue '${values.nama_ruangan}' berhasil diperbarui!`);
       router.push("/dashboard/kelola-vanue");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Update error:", err);
-      toast.error(`Terjadi kesalahan saat menyimpan data: ${err.message}`);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Terjadi kesalahan saat menyimpan data: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -738,6 +761,8 @@ const EditVenuePage = () => {
                           <Textarea
                             placeholder="Contoh: Dapur mini, Papan tulis..."
                             {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -756,6 +781,7 @@ const EditVenuePage = () => {
                           <Textarea
                             placeholder="Contoh: Dilarang merokok di dalam ruangan..."
                             {...field}
+                            value={field.value ?? ""}
                           />
                         </FormControl>
                         <FormMessage />
