@@ -223,20 +223,22 @@ model Notification {
 }
 
 model Booking {
-  booking_id      Int       @id @default(autoincrement())
+  booking_id      Int            @id @default(autoincrement())
   venue_id        Int
-  kode_unik       String    @unique @db.VarChar
-  email_pemesan   String    @db.VarChar
-  telepon_pemesan String?   @db.VarChar
-  tanggal_mulai   DateTime  @db.Date
-  tanggal_akhir   DateTime? @db.Date
-  jam_mulai       DateTime? @db.Time
-  jam_akhir       DateTime? @db.Time
-  total_harga     Decimal   @db.Decimal(10, 2)
-  status_booking  String    @db.VarChar
-  is_manual       Boolean   @default(false)
-  booked_at       DateTime  @default(now()) @db.Timestamp
-  notes_pemesan   String?   @db.Text
+  kode_unik       String         @unique @db.VarChar
+  email_pemesan   String         @db.VarChar
+  telepon_pemesan String?        @db.VarChar
+  tanggal_mulai   DateTime       @db.Date
+  tanggal_akhir   DateTime?      @db.Date
+  jam_mulai       DateTime?      @db.Time
+  jam_akhir       DateTime?      @db.Time
+  total_harga     Decimal        @db.Decimal(10, 2)
+  status_booking  BookingStatus  @default(PENDING) 
+  status_midtrans String?        @db.VarChar(255) 
+
+  is_manual       Boolean        @default(false)
+  booked_at       DateTime       @default(now()) @db.Timestamp
+  notes_pemesan   String?        @db.Text
 
   venue   Venue            @relation(fields: [venue_id], references: [id])
   payment Payment?
@@ -244,6 +246,14 @@ model Booking {
   history BookingHistory[]
 
   @@index([venue_id])
+}
+
+
+enum BookingStatus {
+  PENDING   
+  SUCCESS   
+  EXPIRED   
+  FAILURE   
 }
 
 model Payment {

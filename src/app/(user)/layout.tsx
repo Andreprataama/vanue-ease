@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +27,11 @@ export default function RootLayout({
   return (
     <div>
       <Header />
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.MIDTRANS_CLIENT_KEY} // Ganti dengan key Midtrans Anda
+        strategy="beforeInteractive" // Muat sebelum interaksi
+      />
       <div className="">{children}</div>
       <Footer />
     </div>

@@ -16,7 +16,6 @@ import {
   ClipboardList,
   HelpCircle,
 } from "lucide-react";
-import Link from "next/link";
 import VenueBookingForm from "./VanueBookingForm";
 
 interface TempatDetailMainProps {
@@ -189,6 +188,7 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
           {/* KOLOM KANAN: BOOKING */}
           <div className="w-1/4 h-full">
             <VenueBookingForm
+              venueId={venue.id}
               hargaPerUnit={hargaNumber}
               tipeSewa={tipe_sewa}
               kapasitasMaks={kapasitas_maks || 1}

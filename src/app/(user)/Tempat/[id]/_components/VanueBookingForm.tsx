@@ -17,9 +17,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { formatRupiah } from "@/utils/currency"; // Pastikan utilitas ini ada
+import { formatRupiah } from "@/utils/currency"; //
+import { toast } from "sonner";
+import { useRouter } from "next/navigation"; //
 
 interface VenueBookingFormProps {
+  venueId: number;
   hargaPerUnit: number | null;
   tipeSewa: "perjam" | "perhari" | null;
   kapasitasMaks: number;
@@ -42,15 +45,18 @@ const TIME_SLOTS = [
 ];
 
 const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
+  venueId,
   hargaPerUnit,
   tipeSewa,
   kapasitasMaks,
 }) => {
+  const router = useRouter(); //
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [duration, setDuration] = useState<number>(1);
   const [timeSlot, setTimeSlot] = useState<string>("08:00");
   const [guests, setGuests] = useState<number>(1);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (hargaPerUnit === null || !tipeSewa) {
     return (
@@ -62,15 +68,57 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     );
   }
 
-  const formattedHarga = formatRupiah({ price: hargaPerUnit });
+  const formattedHarga = formatRupiah({ price: hargaPerUnit }); //
   const unitText = tipeSewa === "perjam" ? "/ Jam" : "/ Hari";
+
+  const handleNextStep = async () => {
+    if (!date) {
+      toast.error("Mohon pilih tanggal acara.");
+      return;
+    }
+    // Tambahkan isNaN check di sini untuk keamanan
+    if (guests > kapasitasMaks || guests <= 0 || isNaN(guests)) {
+      toast.error("Jumlah tamu tidak valid.");
+      return;
+    }
+    if (
+      tipeSewa === "perjam" &&
+      (!duration || duration <= 0 || isNaN(duration))
+    ) {
+      toast.error("Durasi sewa per jam harus valid.");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // Kumpulkan data booking untuk dikirim ke checkout page
+    const bookingData = {
+      date: date.toISOString().split("T")[0],
+      time: timeSlot,
+      guests: guests,
+      tipe: tipeSewa,
+      duration: tipeSewa === "perjam" ? duration : null,
+    };
+
+    const params = new URLSearchParams();
+    params.set("date", bookingData.date);
+    params.set("time", bookingData.time);
+    params.set("guests", String(bookingData.guests));
+    params.set("tipe", bookingData.tipe);
+    if (bookingData.duration) {
+      params.set("duration", String(bookingData.duration));
+    }
+
+    router.push(`/Tempat/${venueId}/checkout?${params.toString()}`); //
+
+    setIsProcessing(false);
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 shadow-md rounded-2xl p-6 border bg-white">
       {/* 1. HARGA MULAI */}
       <div className="border-b pb-4">
         <Label className="text-md text-muted-foreground">Harga Mulai</Label>
-        {/* PERBAIKAN DILAKUKAN DI SINI: mt-20 diubah menjadi mt-2 */}
         <div className="mt-2 flex items-baseline">
           <span className="text-4xl font-bold text-foreground">
             {formattedHarga}
@@ -81,7 +129,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         </div>
       </div>
 
-      {/* 2. PILIH TANGGAL ACARA (Menggantikan DatePicker) */}
+      {/* 2. PILIH TANGGAL ACARA */}
       <div className="w-full space-y-2">
         <Label htmlFor="date" className="px-1">
           Pilih Tanggal Acara
@@ -172,9 +220,39 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         </p>
       </div>
 
-      {/* 6. TOMBOL BOOKING */}
-      <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2">
-        Lanjutkan Pemesanan
+      {/* 6. TOMBOL NEXT STEP */}
+      <Button
+        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2"
+        onClick={handleNextStep}
+        disabled={isProcessing}
+      >
+        {isProcessing ? (
+          <>
+            <svg
+              className="animate-spin -ml-1 mr-3 h-5 w-5 text-black"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Memproses...
+          </>
+        ) : (
+          "Lanjutkan Pemesanan"
+        )}
       </Button>
     </div>
   );
