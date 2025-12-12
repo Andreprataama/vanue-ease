@@ -27,7 +27,7 @@ async function fetchAllVanues(): Promise<Venue[]> {
           select: {
             category: { select: { category_id: true, nama_kategori: true } },
           },
-          take: 1,
+          take: 4,
         },
       },
     });
