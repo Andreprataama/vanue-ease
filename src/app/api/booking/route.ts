@@ -31,17 +31,14 @@ const bookingSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // Tidak ada pengecekan auth/session (sesuai permintaan)
   try {
     const rawData = await request.json();
 
-    // 1. Data Validation and Parsing
     const validatedData = bookingSchema.safeParse({
       ...rawData,
       venueId: parseInt(rawData.venueId, 10),
       durasi: rawData.durasi !== null ? parseInt(rawData.durasi, 10) : null,
       jumlah_tamu: parseInt(rawData.jumlah_tamu, 10),
-      // Menggunakan default 10000 jika tidak disediakan atau null
       service_fee: parseInt(rawData.service_fee || 10000, 10),
     });
 
@@ -64,7 +61,6 @@ export async function POST(request: Request) {
       nama_pemesan,
       email_pemesan,
       telepon_pemesan,
-      notes_pemesan,
       service_fee,
     } = validatedData.data;
 
@@ -121,22 +117,17 @@ export async function POST(request: Request) {
 
         jam_mulai: new Date(`1970-01-01T${jam_mulai}:00.000Z`),
 
-        // Simpan total harga (termasuk service fee) menggunakan Decimal
         total_harga: new Prisma.Decimal(finalGrossAmountForMidtrans),
-        // BEST PRACTICE: Status awal selalu PENDING (menggunakan Enum)
+
         status_booking: "PENDING",
 
-        notes_pemesan:
-          notes_pemesan ||
-          `Booking oleh ${nama_pemesan} - Tamu: ${jumlah_tamu}`,
-        // Jika model Anda memiliki nama_pemesan, tambahkan di sini
-        // nama_pemesan: nama_pemesan,
+        jumlah_tamu: jumlah_tamu,
+        nama_pemesan: nama_pemesan,
       },
       // Pilih booking_id untuk dikembalikan ke klien
       select: { booking_id: true, kode_unik: true },
     });
 
-    // 5. Buat Snap Transaction (pastikan env tersedia)
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     const clientKey = process.env.MIDTRANS_CLIENT_KEY;
 
@@ -152,16 +143,14 @@ export async function POST(request: Request) {
       clientKey,
     });
 
-    // Item details untuk Midtrans Snap (terdiri dari 2 item)
     const itemDetails = [
-      // Item 1: Harga Dasar
       {
         id: venueId.toString(),
         price: hargaDasar,
         quantity: 1,
         name: `${venue.nama_ruangan} ${unitDesc}`,
       },
-      // Item 2: Biaya Layanan
+
       {
         id: "SERVICE-FEE",
         price: service_fee,

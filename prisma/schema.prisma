@@ -228,6 +228,8 @@ model Booking {
   booking_id      Int            @id @default(autoincrement())
   venue_id        Int
   kode_unik       String         @unique @db.VarChar
+  nama_pemesan    String         @db.VarChar 
+  jumlah_tamu     Int
   email_pemesan   String         @db.VarChar
   telepon_pemesan String?        @db.VarChar
   tanggal_mulai   DateTime       @db.Date
