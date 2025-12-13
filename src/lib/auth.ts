@@ -18,12 +18,9 @@ const createTransporter = () => {
   });
 };
 
-// Transporter diinisialisasi saat file dimuat
 const transporter = createTransporter();
 
 export const auth = betterAuth({
-  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001",
-
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -32,8 +29,7 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 8,
     maxPasswordLength: 20,
-    requireEmailVerification: true,
-    sendResetPassword: async ({ user, url, token }) => {
+    sendResetPassword: async ({ user, url }) => {
       void transporter
         .sendMail({
           from: process.env.FROM_EMAIL || process.env.EMAIL_USER,
@@ -45,7 +41,7 @@ export const auth = betterAuth({
           console.error("Gagal mengirim email reset password:", error);
         });
     },
-    onPasswordReset: async ({ user }, request) => {
+    onPasswordReset: async ({ user }) => {
       console.log(`Password for user ${user.email} has been reset.`);
     },
   },

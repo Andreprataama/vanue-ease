@@ -1,13 +1,11 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -16,99 +14,92 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { authClient } from "@/lib/auth-client";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-const formSchema = z
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 20;
+
+export const ResetPasswordSchema = z
   .object({
-    newPassword: z.string().min(8, "Kata sandi minimal 8 karakter."),
-    confirmPassword: z
+    password: z
       .string()
-      .min(8, "Konfirmasi kata sandi minimal 8 karakter."),
+      .min(PASSWORD_MIN_LENGTH, {
+        message: `Kata sandi minimal ${PASSWORD_MIN_LENGTH} karakter.`,
+      })
+      .max(PASSWORD_MAX_LENGTH, {
+        message: `Kata sandi maksimal ${PASSWORD_MAX_LENGTH} karakter.`,
+      }),
+    confirmPassword: z.string(),
   })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Kata sandi tidak cocok.",
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Konfirmasi kata sandi tidak cocok.",
     path: ["confirmPassword"],
   });
 
-type ResetPasswordFormValues = z.infer<typeof formSchema>;
+type ResetPasswordFormValues = z.infer<typeof ResetPasswordSchema>;
 
-export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
+const ResetPasswordMain = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = searchParams.get("token");
-
   const form = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(ResetPasswordSchema),
     defaultValues: {
-      newPassword: "",
+      password: "",
       confirmPassword: "",
     },
   });
 
   const isSubmitting = form.formState.isSubmitting;
 
-  async function onSubmit(values: ResetPasswordFormValues) {
+  const onSubmit = async (values: ResetPasswordFormValues) => {
     if (!token) {
-      toast.error("Token reset tidak ditemukan.");
+      toast.error("Gagal Mengganti password.");
       return;
     }
-
-    const { data, error } = await authClient.resetPassword({
-      token: token,
-      newPassword: values.newPassword,
+    const { error } = await authClient.resetPassword({
+      newPassword: values.password,
+      token,
     });
 
     if (error) {
-      console.error("Reset password error:", error);
-      toast.error("Gagal mereset kata sandi.", {
-        description:
-          error.message || "Token mungkin tidak valid atau sudah kedaluwarsa.",
-      });
+      toast.error("Gagal Mengganti password.");
     } else {
-      toast.success("Kata sandi berhasil direset!", {
-        description: "Anda sekarang dapat masuk dengan kata sandi baru Anda.",
+      toast.success("Password Anda Berhasil Di reset.");
+      setTimeout(() => {
+        router.push("/login");
       });
-      // Arahkan pengguna ke halaman login setelah berhasil
-      router.push("/login");
     }
-  }
+  };
 
-  // Jika token tidak ada di URL, tampilkan pesan error
   if (!token) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Token Hilang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">
-              Tautan reset password tidak valid atau rusak.
-            </p>
-            <Link href="/forgot-password">
-              <Button className="w-full">Minta Tautan Baru</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <p>Token Tidak Ditemukan</p>
       </div>
     );
   }
+  // ---
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-sm shadow-2xl">
-        <CardHeader>
-          <CardTitle className="text-2xl">Reset Kata Sandi</CardTitle>
-          <CardDescription>
-            Masukkan kata sandi baru Anda di bawah ini.
+      <Card className="w-full max-w-sm shadow-2xl dark:shadow-md dark:border-gray-800">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Atur Ulang Kata Sandi
+          </CardTitle>
+          <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+            Masukkan kata sandi baru Anda.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,18 +107,19 @@ export default function ResetPasswordPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                // Menggunakan nama field yang benar: newPassword
-                name="newPassword"
+                name="password"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kata Sandi Baru</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="********"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
+                      <div className="relative">
+                        <Input
+                          type="password"
+                          placeholder="New Password"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -140,28 +132,49 @@ export default function ResetPasswordPage() {
                   <FormItem>
                     <FormLabel>Konfirmasi Kata Sandi</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="********"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
+                      <div className="relative">
+                        <Input
+                          type="password"
+                          placeholder="Confirm Password"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+
+              <Button
+                type="submit"
+                className="w-full h-10 font-semibold"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Mengubah Kata Sandi...
+                  </>
                 ) : (
                   "Ubah Kata Sandi"
                 )}
               </Button>
+
+              <div className="text-center text-sm pt-2">
+                <Link
+                  href="/login"
+                  className="text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  &larr; Kembali ke Halaman Login
+                </Link>
+              </div>
             </form>
           </Form>
         </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default ResetPasswordMain;

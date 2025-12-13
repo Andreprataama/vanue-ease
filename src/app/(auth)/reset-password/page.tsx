@@ -1,9 +1,9 @@
-import { ResetPasswordForm } from "./_components/ResetPasswordMain";
+import ResetPasswordMain from "./_components/ResetPasswordMain";
 
 const page = () => {
   return (
     <>
-      <ResetPasswordForm />
+      <ResetPasswordMain />
     </>
   );
 };
