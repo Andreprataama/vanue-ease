@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import midtransClient from "midtrans-client";
 import prisma from "@/utils/prisma";
-import { generateInvoicePdf } from "@/utils/invoice";
+import { generateAndSendInvoice } from "@/lib/sendinvoice";
 
 // Pastikan tipe ini sesuai dengan Enum BookingStatus di schema.prisma Anda
 type BookingStatus = "PENDING" | "SUCCESS" | "EXPIRED" | "FAILURE";
@@ -48,17 +48,10 @@ export async function POST(request: Request) {
       if (fraudStatus === "accept") {
         newBookingStatus = "SUCCESS";
         if (orderId) {
-          try {
-            await generateInvoicePdf(orderId);
-            console.log(
-              `[Midtrans Webhook] Faktur PDF berhasil dibuat dan disimpan untuk Order ID: ${orderId}`
-            );
-          } catch (pdfError) {
-            console.error(
-              `[Midtrans Webhook] Gagal membuat PDF untuk Order ID: ${orderId}`,
-              pdfError
-            );
-          }
+          await generateAndSendInvoice(orderId);
+          console.log(
+            `[Midtrans Webhook] Invoice sent for Order ID: ${orderId}`
+          );
         }
       } else {
         newBookingStatus = "FAILURE";

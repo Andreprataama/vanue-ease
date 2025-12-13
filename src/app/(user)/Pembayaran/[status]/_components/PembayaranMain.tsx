@@ -89,14 +89,8 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
   } = useSWR<ApiBookingDetailResponse>(apiUrl, fetcher);
 
   const handleDownloadInvoice = () => {
-    if (bookingData?.kode_unik) {
-      const invoiceUrl = `/api/booking/${bookingData.kode_unik}/invoice`;
-
-      window.open(invoiceUrl, "_blank");
-      toast.info("Memulai proses download faktur...");
-    } else {
-      toast.error("Kode Booking tidak ditemukan untuk mengunduh faktur.");
-    }
+    const invoiceUrl = `/api/booking/${orderId}/invoice`;
+    window.open(invoiceUrl, "_blank");
   };
 
   const handleRepay = async (currentOrderId: string) => {

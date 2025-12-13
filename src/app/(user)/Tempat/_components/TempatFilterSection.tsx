@@ -173,7 +173,6 @@ const TempatFilterSection = () => {
 
     const localQuery = appliedFilters.localSearchQuery;
 
-    // FILTER 0: Pencarian Nama Lokal
     if (localQuery) {
       currentList = currentList.filter((venue: Venue) => {
         const name = (venue.nama_ruangan || "").toLowerCase();
@@ -288,7 +287,7 @@ const TempatFilterSection = () => {
             defaultValue={["pencarian", "kategori", "harga", "kapasitas"]}
             className="w-full"
           >
-            {/* PENCARIAN CEPAT */}
+            {/*  Search Bar */}
             <AccordionItem value="pencarian" className="border-b pb-5">
               <AccordionTrigger className="font-medium hover:no-underline">
                 Pencarian Nama

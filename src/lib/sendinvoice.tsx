@@ -1,25 +1,31 @@
-import { NextResponse } from "next/server";
 import prisma from "@/utils/prisma";
 import { jsPDF } from "jspdf";
+import nodemailer from "nodemailer";
 
 const PADDING_X = 20;
 const PAGE_WIDTH = 210;
+const BIAYA_LAYANAN = 10000;
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ orderId: string }> }
-) {
-  const { orderId } = await params;
+const formatRupiah = (number: number) => `Rp ${number.toLocaleString("id-ID")}`;
 
-  if (!orderId) {
-    return NextResponse.json(
-      { message: "Order ID tidak ditemukan." },
-      { status: 400 }
-    );
-  }
+// Konfigurasi Nodemailer Transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  // Port harus di-parse ke number
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  // Atur secure: true jika port 465, false jika 587
+  secure: process.env.SMTP_PORT === "465",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
+export async function generateAndSendInvoice(
+  orderId: string
+): Promise<boolean> {
   try {
-    // 1. Ambil Data Booking
+    // 2. Ambil Data Booking dari Database
     const booking = await prisma.booking.findUnique({
       where: { kode_unik: orderId },
       select: {
@@ -45,26 +51,24 @@ export async function GET(
       },
     });
 
-    if (!booking) {
-      return NextResponse.json(
-        { message: "Booking tidak ditemukan." },
-        { status: 404 }
-      );
-    }
-
-    if (!booking.email_pemesan) {
+    if (!booking || !booking.email_pemesan) {
       console.warn(
-        `Booking ${orderId} tidak memiliki email pemesan. Gagal mengirim email.`
+        `[Invoice] Booking ${orderId} tidak ditemukan atau tanpa email.`
       );
+      return false;
     }
 
+    // Hitung harga final
+    const hargaSewa =
+      booking.venue.tipe_sewa === "per_jam"
+        ? Number(booking.venue.harga_per_jam)
+        : Number(booking.venue.harga_per_hari);
+    const totalPaymentFinal = hargaSewa + BIAYA_LAYANAN;
+    const totalPaymentFormatted = formatRupiah(totalPaymentFinal);
+
+    // 3. Buat Dokumen PDF (jsPDF Logic)
     const doc = new jsPDF();
     let yPos = 0;
-
-    const formatRupiah = (number: number) =>
-      `Rp ${number.toLocaleString("id-ID")}`;
-
-    const BIAYA_LAYANAN = 10000;
 
     // ========== HEADER VENUE EASE ==========
     doc.setFillColor(0, 0, 0);
@@ -125,12 +129,6 @@ export async function GET(
 
     doc.setFont("helvetica", "normal");
 
-    // Hitung harga sewa
-    const hargaSewa =
-      booking.venue.tipe_sewa === "per_jam"
-        ? Number(booking.venue.harga_per_jam)
-        : Number(booking.venue.harga_per_hari);
-
     // Baris 1: Venue
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
@@ -145,11 +143,7 @@ export async function GET(
     doc.setTextColor(0, 0, 0);
     const tanggalFormatted = new Date(booking.tanggal_mulai).toLocaleDateString(
       "id-ID",
-      {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-      }
+      { day: "numeric", month: "numeric", year: "numeric" }
     );
 
     doc.text(`${tanggalFormatted}`, PAGE_WIDTH / 2, yPos);
@@ -177,7 +171,7 @@ export async function GET(
 
     yPos += 10;
 
-    // ========== SUBTOTAL ==========
+    // ========== SUBTOTAL / REKAP ==========
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Subtotal:", PAGE_WIDTH - PADDING_X - 60, yPos);
@@ -202,28 +196,27 @@ export async function GET(
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("Total Payment:", PAGE_WIDTH - PADDING_X - 60, yPos);
-    doc.text(
-      formatRupiah(hargaSewa + BIAYA_LAYANAN),
-      PAGE_WIDTH - PADDING_X - 3,
-      yPos,
-      { align: "right" }
-    );
+    doc.text(totalPaymentFormatted, PAGE_WIDTH - PADDING_X - 3, yPos, {
+      align: "right",
+    });
+
+    // ... (Logika INFORMASI TAMBAHAN dan FOOTER Anda di sini) ...
 
     yPos += 70;
 
-    // ========== INFORMASI TAMBAHAN ==========
+    // ========== INFORMASI TAMBAHAN & FOOTER (Disertakan agar kode komplit) ==========
     doc.setDrawColor(200, 200, 200);
     doc.line(PADDING_X, yPos, PAGE_WIDTH - PADDING_X, yPos);
     yPos += 8;
 
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Catatan Penting:", PADDING_X, yPos);
+    doc
+      .setFontSize(9)
+      .setFont("helvetica", "bold")
+      .setTextColor(0, 0, 0)
+      .text("Catatan Penting:", PADDING_X, yPos);
     yPos += 6;
 
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
+    doc.setFont("helvetica", "normal").setTextColor(80, 80, 80);
     doc.text(
       "• Harap datang 15 menit sebelum waktu booking dimulai",
       PADDING_X + 3,
@@ -237,12 +230,6 @@ export async function GET(
     );
     yPos += 5;
     doc.text(
-      "• Untuk pembatalan atau perubahan, hubungi kami minimal 24 jam sebelumnya",
-      PADDING_X + 3,
-      yPos
-    );
-    yPos += 5;
-    doc.text(
       "• Invoice ini berlaku sebagai bukti pembayaran yang sah",
       PADDING_X + 3,
       yPos
@@ -250,22 +237,21 @@ export async function GET(
 
     yPos += 12;
 
-    // ========== FOOTER ==========
     doc.setDrawColor(200, 200, 200);
     doc.line(PADDING_X, yPos, PAGE_WIDTH - PADDING_X, yPos);
     yPos += 8;
 
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(
-      "Terima kasih telah menggunakan layanan Venue Ease!",
-      PADDING_X,
-      yPos
-    );
+    doc
+      .setFontSize(9)
+      .setFont("helvetica", "normal")
+      .setTextColor(100, 100, 100)
+      .text(
+        "Terima kasih telah menggunakan layanan Venue Ease!",
+        PADDING_X,
+        yPos
+      );
     yPos += 5;
-    doc.setFontSize(8);
-    doc.text(
+    doc.setFontSize(8).text(
       `Dicetak pada: ${new Date().toLocaleString("id-ID", {
         day: "2-digit",
         month: "long",
@@ -277,25 +263,77 @@ export async function GET(
       yPos
     );
 
-    // ========== OUTPUT PDF ==========
+    // 4. Konversi PDF ke Buffer untuk Attachment
     const pdfOutput = doc.output("arraybuffer");
+    const pdfBuffer = Buffer.from(pdfOutput);
 
-    return new NextResponse(pdfOutput, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
+    // 5. Kirim Email Nodemailer
+    const info = await transporter.sendMail({
+      from: process.env.FROM_EMAIL || process.env.EMAIL_USER,
+      to: booking.email_pemesan,
+      subject: `[LUNAS] Invoice Pemesanan Venue Ease `,
+      text: `Terima kasih! Pembayaran lunas. Total: ${totalPaymentFormatted}. Invoice terlampir.`,
+      html: `
+        
 
-        "Content-Disposition": `attachment; filename="invoice-${booking.kode_unik}.pdf"`,
-      },
+<p>
+  Kami informasikan bahwa pembayaran Anda untuk pemesanan venue di Venue Ease
+  telah berhasil diterima dan lunas.
+</p>
+
+<div style="margin: 20px 0; padding: 15px; border: 1px solid #eeeeee; border-radius: 6px; background-color: #f9f9f9;">
+    <p style="margin: 0; font-size: 14px; color: #555;">
+        <strong>Detail Pemesanan:</strong> ${booking.venue.nama_ruangan}
+    </p>
+    <p style="margin: 5px 0 0; font-size: 14px; color: #555;">
+        <strong>Kode Booking:</strong> ${booking.kode_unik}
+    </p>
+    <p style="margin: 15px 0 0; font-size: 16px; font-weight: bold; color: #000;">
+        Total Pembayaran: 
+        <span style="color: #1a73e8;">${totalPaymentFormatted}</span>
+    </p>
+</div>
+
+<p>
+  Sebagai bukti pembayaran yang sah, Invoice Resmi Anda telah kami lampirkan
+  dalam format PDF pada email ini.
+</p>
+
+<p>
+  Mohon simpan dokumen ini dengan baik dan tunjukkan kepada staf kami di lokasi
+  pada tanggal pemakaian venue. Invoice ini berlaku sebagai bukti pembayaran
+  saat Anda tiba di venue.
+</p>
+
+<p>
+  Terima kasih atas kepercayaan Anda menggunakan layanan Venue Ease. Kami
+  berharap acara Anda berjalan lancar.
+</p>
+
+<p style="margin-top: 20px;">
+  Hormat kami,<br>
+  <strong>Tim Venue Ease</strong>
+</p>
+      `,
+      attachments: [
+        {
+          filename: `invoice-${booking.kode_unik}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
     });
-  } catch (error) {
-    console.error("Invoice Error:", error);
-    return NextResponse.json(
-      {
-        message: "Gagal membuat invoice.",
-        detail: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+
+    console.log(
+      `[Invoice] Email ${booking.kode_unik} terkirim: ${info.messageId}`
     );
+    return true;
+  } catch (error) {
+    console.error(
+      `[Invoice] Gagal memproses atau mengirim email untuk ${orderId}:`,
+      error
+    );
+    // Mengembalikan false untuk menandakan kegagalan pengiriman (meskipun Midtrans sudah sukses)
+    return false;
   }
 }

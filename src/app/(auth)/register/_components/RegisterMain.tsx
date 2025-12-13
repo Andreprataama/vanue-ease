@@ -26,6 +26,7 @@ import { Loader2 } from "lucide-react";
 import { signUpAction } from "@/server/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const formSchema = z
   .object({
@@ -77,9 +78,10 @@ export function RegisterForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
+        <CardTitle> Vanue Ease</CardTitle>
         <CardDescription>
-          Enter your details below to create an account
+          Jangkau Ribuan Penyewa Terbaik. Bergabung Jadi Official Partner
+          VenueEase.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -93,7 +95,7 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input placeholder="Vanue Ease" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -110,7 +112,7 @@ export function RegisterForm() {
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="m@example.com"
+                      placeholder="email@example.com"
                       {...field}
                     />
                   </FormControl>
@@ -161,7 +163,13 @@ export function RegisterForm() {
               {isLoading ? <Loader2 className="animate-spin" /> : "Sign Up"}
             </Button>
             <FormDescription className="text-center">
-              Already have an account? <a href="/login">Login</a>
+              Sudah Punya Akun?{" "}
+              <Link className="font-semibold text-black " href="/login">
+                Masuk
+              </Link>
+            </FormDescription>
+            <FormDescription className="text-center text-[10px]">
+              © 2025 Venue Ease. Hak Cipta Dilindungi.
             </FormDescription>
           </form>
         </Form>

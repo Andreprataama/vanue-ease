@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -61,9 +62,11 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Login to your account</CardTitle>
-        <CardDescription>
-          Enter your email and password to login
+        <CardTitle className="text-center font-semibold text-2xl">
+          Vanue Ease
+        </CardTitle>
+        <CardDescription className="text-center">
+          Akses Dashboard Partner Anda
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -100,14 +103,27 @@ export function LoginForm() {
                     />
                   </FormControl>
                   <FormMessage />
+                  <Link
+                    className="text-sm w-full text-end"
+                    href="/forget-password"
+                  >
+                    Lupa Password?
+                  </Link>
                 </FormItem>
               )}
             />
+
             <Button type="submit" className="w-full">
               Login
             </Button>
             <FormDescription className="text-center">
-              Don&apos;t have an account? <a href="/register">Sign up</a>
+              Belum Punya Akun?{" "}
+              <Link className="font-semibold text-black " href="/register">
+                Daftar sekarang
+              </Link>
+            </FormDescription>
+            <FormDescription className="text-center text-[10px]">
+              © 2025 Venue Ease. Hak Cipta Dilindungi.
             </FormDescription>
           </form>
         </Form>
