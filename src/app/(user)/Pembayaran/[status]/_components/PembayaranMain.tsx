@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ApiBookingDetailResponse } from "@/type/booking";
 import { toast } from "sonner";
-
 const fetcher: Fetcher<ApiBookingDetailResponse> = (url: string) =>
   fetch(url).then((res) => res.json());
 
@@ -32,7 +31,9 @@ declare global {
         token: string,
         options: {
           onSuccess: () => void;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPending: (result: any) => void;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onError: (result: any) => void;
           onClose: () => void;
         }
@@ -78,7 +79,6 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
   const [isRepaying, setIsRepaying] = useState(false);
 
   const orderId = searchParams.get("order_id");
-  // Menggunakan endpoint yang sama untuk re-fetch detail
   const apiUrl = orderId ? `/api/booking/${orderId}` : null;
 
   const {
@@ -88,30 +88,39 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
     mutate,
   } = useSWR<ApiBookingDetailResponse>(apiUrl, fetcher);
 
+  const handleDownloadInvoice = () => {
+    if (bookingData?.kode_unik) {
+      const invoiceUrl = `/api/booking/${bookingData.kode_unik}/invoice`;
+
+      window.open(invoiceUrl, "_blank");
+      toast.info("Memulai proses download faktur...");
+    } else {
+      toast.error("Kode Booking tidak ditemukan untuk mengunduh faktur.");
+    }
+  };
+
   const handleRepay = async (currentOrderId: string) => {
     setIsRepaying(true);
 
+    if (!currentOrderId) {
+      toast.error("Error: Kode Booking tidak ditemukan.");
+      setIsRepaying(false);
+      return;
+    }
+
     try {
-      // 1. Panggil API untuk mendapatkan Snap Token baru untuk Order ID yang sudah ada
-      // Catatan: Asumsi endpoint /api/booking bisa menerima GET/POST/PUT untuk re-generate snap token.
-      // Dalam contoh ini, kita membuat endpoint baru /api/repay-snap
-      // Jika Anda menggunakan endpoint POST /api/booking, Anda mungkin perlu menyesuaikan payload
-
-      const response = await fetch(
-        `/api/booking/repay-snap?order_id=${currentOrderId}`,
-        {
-          method: "GET", // Asumsi endpoint baru yang sederhana untuk re-pay
-        }
-      );
-
-      // Jika endpoint /api/booking/[orderId] Anda support PUT untuk update status/regen token, gunakan itu
-      // const response = await fetch(`/api/booking/${currentOrderId}`, { method: 'PUT', ... });
+      const response = await fetch(`/api/booking/${currentOrderId}/repay`, {
+        method: "GET",
+      });
 
       const result = await response.json();
 
       if (!response.ok || !result.snapToken) {
+        console.error("Repay API Error Response:", result);
         throw new Error(
-          result.message || "Gagal mendapatkan token pembayaran baru."
+          result.message ||
+            result.detail ||
+            "Gagal mendapatkan token pembayaran baru."
         );
       }
 
@@ -120,30 +129,34 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
       if (window.snap) {
         window.snap.pay(snapToken, {
           onSuccess: () => {
-            toast.success("Pembayaran berhasil. Status diperbarui!");
-            // Paksa SWR untuk me-fetch data terbaru dari backend
-            mutate();
-            router.push(`/Pembayaran/success?order_id=${currentOrderId}`);
+            toast.success("Pembayaran berhasil. Menunggu konfirmasi status...");
+
+            setTimeout(() => {
+              mutate(); // Force re-fetch status terbaru
+              router.push(`/Pembayaran/success?order_id=${currentOrderId}`);
+            }, 3000);
+            // ---------------------------------
           },
           onPending: () => {
             toast.warning("Pembayaran tertunda. Mohon selesaikan.");
             mutate();
             router.push(`/Pembayaran/pending?order_id=${currentOrderId}`);
           },
-          onError: () => {
+          onError: (midtransError) => {
+            console.error("Midtrans Snap Error:", midtransError);
             toast.error("Pembayaran gagal. Silakan coba lagi.");
             mutate();
             router.push(`/Pembayaran/failure?order_id=${currentOrderId}`);
           },
           onClose: () => {
             toast.info("Jendela ditutup. Status tetap Pending.");
-
-            mutate();
+            // Tidak perlu mutate
           },
         });
       } else {
         toast.error("Midtrans Snap belum dimuat dengan benar.");
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Repay Error:", error);
       toast.error(error.message || "Gagal memproses ulang pembayaran.");
@@ -151,9 +164,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
       setIsRepaying(false);
     }
   };
-  // --- END LOGIC HANDLE RE-PAY ---
 
-  // --- Penanganan Loading dan Error Awal ---
   if (error) {
     return (
       <div className="container mx-auto py-20 text-center">
@@ -189,24 +200,21 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
     );
   }
 
-  // --- Penentuan Status Efektif (Penting untuk mengatasi konflik URL) ---
+  // --- Penentuan Status Efektif ---
   let effectiveStatusKey: keyof typeof statusMetadata = "failure";
   const backendStatus = bookingData.status_booking.toLowerCase();
 
   if (backendStatus === "success") {
     effectiveStatusKey = "success";
   } else if (backendStatus === "pending") {
-    // Jika backend PENDING, kita gunakan status dari URL (pending/onclose)
     effectiveStatusKey = status === "onclose" ? "onclose" : "pending";
   } else {
-    // FAILURE atau EXPIRED di backend dianggap 'failure'
     effectiveStatusKey = "failure";
   }
 
   const metadata = statusMetadata[effectiveStatusKey];
   const StatusIcon = metadata.icon;
 
-  // --- Fungsi untuk Merender Bagian Aksi & Informasi Khusus ---
   const renderStatusSpecificContent = () => {
     switch (effectiveStatusKey) {
       case "success":
@@ -216,14 +224,21 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
               Transaksi Anda Sukses dan sudah lunas.
             </p>
             <Button
-              onClick={() => router.push("/dashboard/riwayat-pesanan")}
+              onClick={handleDownloadInvoice}
               className="w-full bg-green-600 hover:bg-green-700 mt-4"
             >
-              Lihat Bukti Transaksi & Riwayat
+              Download Struk / Faktur
+            </Button>
+
+            <Button
+              onClick={() => router.push("/Tempat")}
+              variant="outline"
+              className="w-full mt-2"
+            >
+              Kembali Cari Tempat
             </Button>
           </>
         );
-
       case "pending":
       case "onclose":
         return (
@@ -231,7 +246,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 space-y-2 my-4">
               <p className="font-semibold flex items-center text-yellow-700">
                 <AlertTriangle className="w-5 h-5 mr-2" />
-                Status Midtrans: Menunggu Pembayaran
+                Menunggu Pembayaran
               </p>
               <p className="text-sm">
                 Mohon selesaikan pembayaran. Anda dapat melanjutkan melalui
@@ -240,7 +255,6 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
             </div>
             <div className="space-y-3 pt-2">
               <Button
-                // Ganti dengan fungsi re-pay
                 onClick={() => handleRepay(bookingData.kode_unik)}
                 className="w-full bg-yellow-600 hover:bg-yellow-700"
                 disabled={isRepaying}
@@ -303,7 +317,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
           <CardTitle className="text-3xl">{metadata.title}</CardTitle>
           <p className="text-muted-foreground mt-2">{metadata.detail}</p>
           <p className="text-sm font-semibold mt-4">
-            Status Backend: {bookingData.status_booking}
+            Status Pembayaran anda : {bookingData.status_booking}
           </p>
         </CardHeader>
 

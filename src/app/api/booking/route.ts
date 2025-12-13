@@ -173,7 +173,7 @@ export async function POST(request: Request) {
     const parameter = {
       transaction_details: {
         order_id: booking.kode_unik,
-        gross_amount: finalGrossAmountForMidtrans, // Kirim TOTAL harga
+        gross_amount: finalGrossAmountForMidtrans,
       },
       credit_card: { secure: true },
       customer_details: {
@@ -186,7 +186,6 @@ export async function POST(request: Request) {
 
     const transaction = await snap.createTransaction(parameter);
 
-    // 6. Return Snap Token ke Client
     return NextResponse.json(
       {
         success: true,

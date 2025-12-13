@@ -355,7 +355,6 @@ const CheckoutMain = ({ venueId }: CheckoutMainProps) => {
     </Card>
   );
 
-  // --- Komponen Form Kontak (Right Side) ---
   const ContactForm = () => (
     <Card className="h-full p-4">
       <CardHeader className="p-0 pb-4">

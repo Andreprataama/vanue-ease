@@ -237,17 +237,33 @@ model Booking {
   total_harga     Decimal        @db.Decimal(10, 2)
   status_booking  BookingStatus  @default(PENDING) 
   status_midtrans String?        @db.VarChar(255) 
+  pdf_invoice_url   String?
 
   is_manual       Boolean        @default(false)
   booked_at       DateTime       @default(now()) @db.Timestamp
   notes_pemesan   String?        @db.Text
 
   venue   Venue            @relation(fields: [venue_id], references: [id])
+  invoice Invoice?
   payment Payment?
   review  Review?
   history BookingHistory[]
+  
+ 
+  
 
   @@index([venue_id])
+}
+
+model Invoice {
+  id             Int      @id @default(autoincrement())
+  invoice_number String   @unique
+  date           DateTime
+  transaction_id String   @unique 
+  amount         Decimal
+  payment_method String
+  items          Json    
+  booking Booking @relation(fields: [transaction_id], references: [kode_unik])
 }
 
 

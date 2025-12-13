@@ -43,10 +43,9 @@ export async function GET(
       );
     }
 
-    // Mengkonversi tipe data untuk JSON serialization
     const serializedBooking = {
       ...booking,
-      // Mengubah Decimal menjadi Number/String untuk Client Component
+
       total_harga: Number(booking.total_harga.toString()),
       tanggal_mulai: booking.tanggal_mulai.toISOString().split("T")[0],
       jam_mulai: booking.jam_mulai?.toLocaleTimeString("id-ID", {

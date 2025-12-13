@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Inisialisasi Core API di dalam handler agar memakai env yang telah divalidasi
     const coreApi = new midtransClient.CoreApi({
       isProduction: process.env.NODE_ENV === "production",
       serverKey,
@@ -44,30 +43,23 @@ export async function POST(request: Request) {
 
     let newBookingStatus: BookingStatus;
 
-    // 2. Tentukan status booking (menggunakan nilai ENUM)
     if (transactionStatus === "capture" || transactionStatus === "settlement") {
-      // Pembayaran berhasil (Kartu kredit (capture) atau Non-kartu kredit (settlement))
       if (fraudStatus === "accept") {
         newBookingStatus = "SUCCESS";
       } else {
-        newBookingStatus = "FAILURE"; // Transaksi diblokir (misalnya, suspected fraud)
+        newBookingStatus = "FAILURE";
       }
     } else if (
       transactionStatus === "cancel" ||
       transactionStatus === "expire" ||
       transactionStatus === "deny"
     ) {
-      // Transaksi dibatalkan, kedaluwarsa, atau ditolak
       newBookingStatus = "EXPIRED";
     } else {
-      // Status lain (seperti pending, refund, dll.). Kita hanya fokus pada perubahan status.
       newBookingStatus = "PENDING";
     }
 
-    // 3. Update Status Booking di Database
-    // Kita hanya melakukan update jika statusnya berubah dari PENDING
     if (orderId && newBookingStatus !== "PENDING") {
-      // Pastikan field total_harga tidak di-update karena sudah benar sejak awal
       await prisma.booking.update({
         where: { kode_unik: orderId },
         data: {
@@ -78,22 +70,15 @@ export async function POST(request: Request) {
         `[Midtrans Webhook] Order ID: ${orderId} updated to ${newBookingStatus}`
       );
     } else {
-      // Opsional: Log jika menerima notifikasi PENDING (misalnya, jika status belum berubah)
       console.log(`[Midtrans Webhook] Order ID: ${orderId} is still PENDING.`);
     }
   } catch (error) {
-    // Logging error jika ada masalah dalam pemrosesan notifikasi (misalnya, gagal parsing JSON, gagal update DB)
     console.error(
       `[Midtrans Webhook Error] Processing Order ID: ${orderId || "N/A"}:`,
       error
     );
-
-    // BEST PRACTICE: Walaupun terjadi error di sisi server Anda,
-    // tetap kembalikan 200 OK agar Midtrans tidak mengulang notifikasi (Retry)
-    // jika data di DB sudah terlanjur terupdate.
   }
 
-  // SELALU kembalikan 200 OK ke Midtrans untuk mengkonfirmasi penerimaan notifikasi.
   return NextResponse.json(
     { message: "Notification handled successfully" },
     { status: 200 }
