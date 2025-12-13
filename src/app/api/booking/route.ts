@@ -76,8 +76,6 @@ export async function POST(request: Request) {
         tipe_sewa: true,
         harga_per_jam: true,
         harga_per_hari: true,
-        // Pastikan Anda memilih field harga sebagai Decimal jika di Prisma demikian
-        // Dalam contoh ini kita asumsikan Number/Decimal bisa dikonversi ke Number
       },
     });
 

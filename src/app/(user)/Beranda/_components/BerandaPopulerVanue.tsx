@@ -1,46 +1,25 @@
+"use client";
 import ProductCard from "@/components/ProductCard";
-import { Venue } from "@/type/venua";
-import prisma from "@/utils/prisma";
+import useSWR from "swr";
+import { ApiDetailPopuler } from "@/type/venua";
 
-async function fetchAllVanues(): Promise<Venue[]> {
-  try {
-    const venues = await prisma.venue.findMany({
-      select: {
-        id: true,
-        nama_ruangan: true,
-        tipe_sewa: true,
-        harga_per_jam: true,
-        harga_per_hari: true,
-        kapasitas_maks: true,
-        alamat_venue: true,
-        images: {
-          where: { is_primary: true },
-          select: { image_url: true },
-        },
-        venueFacilities: {
-          select: {
-            facility: { select: { facility_id: true, nama_fasilitas: true } },
-          },
-        },
-        deskripsi_venue: true,
-        venueCategories: {
-          select: {
-            category: { select: { category_id: true, nama_kategori: true } },
-          },
-          take: 4,
-        },
-      },
-    });
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-    return venues as Venue[];
-  } catch (error) {
-    console.error("Error fetching all vanues:", error);
-    return [];
+const BerandaPopulerVanue = () => {
+  const { data, error } = useSWR<ApiDetailPopuler>(
+    "/api/vanue-populer",
+    fetcher
+  );
+
+  if (error) {
+    return <div>Gagal memuat data vanue.</div>;
   }
-}
 
-const BerandaPopulerVanue = async () => {
-  const allVanues = await fetchAllVanues();
+  const vanues = data?.data || [];
+
+  if (!data) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <section className="h-full p-10">
@@ -53,7 +32,7 @@ const BerandaPopulerVanue = async () => {
           terbaik dari penyewa kami.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
-          {allVanues.map((vanue) => (
+          {vanues.map((vanue) => (
             <ProductCard key={vanue.id} ruanganData={vanue} />
           ))}
         </div>

@@ -26,9 +26,9 @@ export async function GET() {
           select: {
             category: { select: { category_id: true, nama_kategori: true } },
           },
-          take: 4,
         },
       },
+      take: 4,
     });
 
     console.log(`Successfully fetched ${venues.length} public venues.`);

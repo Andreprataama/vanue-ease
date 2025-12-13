@@ -1,9 +1,8 @@
-// src/app/Pembayaran/[status]/_components/PembayaranMain.tsx
-
 "use client";
 
 import useSWR, { Fetcher } from "swr";
 import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import {
   Loader2,
   CalendarIcon,
@@ -21,13 +20,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ApiBookingDetailResponse } from "@/type/booking";
-
-interface PembayaranMainProps {
-  status: "success" | "pending" | "failure" | "onclose";
-}
+import { toast } from "sonner";
 
 const fetcher: Fetcher<ApiBookingDetailResponse> = (url: string) =>
   fetch(url).then((res) => res.json());
+
+declare global {
+  interface Window {
+    snap: {
+      pay: (
+        token: string,
+        options: {
+          onSuccess: () => void;
+          onPending: (result: any) => void;
+          onError: (result: any) => void;
+          onClose: () => void;
+        }
+      ) => void;
+    };
+  }
+}
 
 const statusMetadata = {
   success: {
@@ -56,19 +68,92 @@ const statusMetadata = {
   },
 };
 
+interface PembayaranMainProps {
+  status: "success" | "pending" | "failure" | "onclose";
+}
+
 const PembayaranMain = ({ status }: PembayaranMainProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isRepaying, setIsRepaying] = useState(false);
 
   const orderId = searchParams.get("order_id");
+  // Menggunakan endpoint yang sama untuk re-fetch detail
   const apiUrl = orderId ? `/api/booking/${orderId}` : null;
 
   const {
     data: bookingResponse,
     error,
     isLoading,
+    mutate,
   } = useSWR<ApiBookingDetailResponse>(apiUrl, fetcher);
 
+  const handleRepay = async (currentOrderId: string) => {
+    setIsRepaying(true);
+
+    try {
+      // 1. Panggil API untuk mendapatkan Snap Token baru untuk Order ID yang sudah ada
+      // Catatan: Asumsi endpoint /api/booking bisa menerima GET/POST/PUT untuk re-generate snap token.
+      // Dalam contoh ini, kita membuat endpoint baru /api/repay-snap
+      // Jika Anda menggunakan endpoint POST /api/booking, Anda mungkin perlu menyesuaikan payload
+
+      const response = await fetch(
+        `/api/booking/repay-snap?order_id=${currentOrderId}`,
+        {
+          method: "GET", // Asumsi endpoint baru yang sederhana untuk re-pay
+        }
+      );
+
+      // Jika endpoint /api/booking/[orderId] Anda support PUT untuk update status/regen token, gunakan itu
+      // const response = await fetch(`/api/booking/${currentOrderId}`, { method: 'PUT', ... });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.snapToken) {
+        throw new Error(
+          result.message || "Gagal mendapatkan token pembayaran baru."
+        );
+      }
+
+      const snapToken = result.snapToken;
+
+      if (window.snap) {
+        window.snap.pay(snapToken, {
+          onSuccess: () => {
+            toast.success("Pembayaran berhasil. Status diperbarui!");
+            // Paksa SWR untuk me-fetch data terbaru dari backend
+            mutate();
+            router.push(`/Pembayaran/success?order_id=${currentOrderId}`);
+          },
+          onPending: () => {
+            toast.warning("Pembayaran tertunda. Mohon selesaikan.");
+            mutate();
+            router.push(`/Pembayaran/pending?order_id=${currentOrderId}`);
+          },
+          onError: () => {
+            toast.error("Pembayaran gagal. Silakan coba lagi.");
+            mutate();
+            router.push(`/Pembayaran/failure?order_id=${currentOrderId}`);
+          },
+          onClose: () => {
+            toast.info("Jendela ditutup. Status tetap Pending.");
+
+            mutate();
+          },
+        });
+      } else {
+        toast.error("Midtrans Snap belum dimuat dengan benar.");
+      }
+    } catch (error: any) {
+      console.error("Repay Error:", error);
+      toast.error(error.message || "Gagal memproses ulang pembayaran.");
+    } finally {
+      setIsRepaying(false);
+    }
+  };
+  // --- END LOGIC HANDLE RE-PAY ---
+
+  // --- Penanganan Loading dan Error Awal ---
   if (error) {
     return (
       <div className="container mx-auto py-20 text-center">
@@ -104,17 +189,31 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
     );
   }
 
-  const metadata = statusMetadata[status] || statusMetadata.pending;
+  // --- Penentuan Status Efektif (Penting untuk mengatasi konflik URL) ---
+  let effectiveStatusKey: keyof typeof statusMetadata = "failure";
+  const backendStatus = bookingData.status_booking.toLowerCase();
+
+  if (backendStatus === "success") {
+    effectiveStatusKey = "success";
+  } else if (backendStatus === "pending") {
+    // Jika backend PENDING, kita gunakan status dari URL (pending/onclose)
+    effectiveStatusKey = status === "onclose" ? "onclose" : "pending";
+  } else {
+    // FAILURE atau EXPIRED di backend dianggap 'failure'
+    effectiveStatusKey = "failure";
+  }
+
+  const metadata = statusMetadata[effectiveStatusKey];
   const StatusIcon = metadata.icon;
 
   // --- Fungsi untuk Merender Bagian Aksi & Informasi Khusus ---
   const renderStatusSpecificContent = () => {
-    switch (status) {
+    switch (effectiveStatusKey) {
       case "success":
         return (
           <>
             <p className="text-sm font-semibold mt-4 text-green-600">
-              Transaksi Anda Sukses!
+              Transaksi Anda Sukses dan sudah lunas.
             </p>
             <Button
               onClick={() => router.push("/dashboard/riwayat-pesanan")}
@@ -134,17 +233,30 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
                 <AlertTriangle className="w-5 h-5 mr-2" />
                 Status Midtrans: Menunggu Pembayaran
               </p>
+              <p className="text-sm">
+                Mohon selesaikan pembayaran. Anda dapat melanjutkan melalui
+                tombol di bawah.
+              </p>
             </div>
             <div className="space-y-3 pt-2">
               <Button
-                onClick={() =>
-                  alert(
-                    "Fungsi Lanjutkan Pembayaran (Midtrans Re-pay) belum diimplementasikan."
-                  )
-                }
+                // Ganti dengan fungsi re-pay
+                onClick={() => handleRepay(bookingData.kode_unik)}
                 className="w-full bg-yellow-600 hover:bg-yellow-700"
+                disabled={isRepaying}
               >
-                Lanjutkan Pembayaran Sekarang
+                {isRepaying ? (
+                  <Loader2 className="animate-spin mr-2" />
+                ) : (
+                  "Lanjutkan Pembayaran Sekarang"
+                )}
+              </Button>
+              <Button
+                onClick={() => router.push("/dashboard/riwayat-pesanan")}
+                variant="outline"
+                className="w-full"
+              >
+                Cek Status Nanti
               </Button>
             </div>
           </>
@@ -190,10 +302,13 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
           <StatusIcon className={`w-12 h-12 mx-auto mb-3 ${metadata.color}`} />
           <CardTitle className="text-3xl">{metadata.title}</CardTitle>
           <p className="text-muted-foreground mt-2">{metadata.detail}</p>
+          <p className="text-sm font-semibold mt-4">
+            Status Backend: {bookingData.status_booking}
+          </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Section 1: Ringkasan Transaksi */}
+          {/* Section 1: Ringkasan Transaksi & Harga */}
           <h3 className="text-xl font-bold border-b pb-2">
             Ringkasan Transaksi
           </h3>
@@ -215,7 +330,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
           {/* Section 2: KONTEN SPESIFIK STATUS DAN TOMBOL AKSI */}
           <div className="pt-4 border-t">{renderStatusSpecificContent()}</div>
 
-          {/* Section 3: Detail Pemesanan (Dibuat opsional) */}
+          {/* Section 3: Detail Waktu & Pemesan */}
           <h3 className="text-xl font-bold border-t pt-4">
             Detail Waktu & Pemesan
           </h3>
