@@ -1,3 +1,5 @@
+// src/app/(owner)/dashboard/kelola-vanue/data-table.tsx
+
 import {
   ColumnDef,
   flexRender,
@@ -19,7 +21,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
 
   meta: {
-    onDelete: (id: number) => Promise<void>;
+    onDelete: (id: number) => void; // Update type agar sesuai
   };
 }
 
@@ -41,7 +43,10 @@ export function VenueDataTable<TData, TValue>({
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow
+              key={headerGroup.id}
+              className="bg-gray-50 hover:bg-gray-100"
+            >
               {headerGroup.headers.map((header) => {
                 return (
                   <TableHead key={header.id}>
@@ -73,7 +78,10 @@ export function VenueDataTable<TData, TValue>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
                 Tidak ada data vanue yang ditemukan.
               </TableCell>
             </TableRow>

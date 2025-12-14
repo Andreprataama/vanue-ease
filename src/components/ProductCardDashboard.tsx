@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HeartIcon, MapPin, User } from "lucide-react";
+import { HeartIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,9 +27,6 @@ const ProductCard = ({ ruanganData }: ProductCardProps) => {
   const {
     id,
     nama_ruangan,
-    deskripsi_venue = "Tidak ada deskripsi tersedia.",
-    alamat_venue = "Lokasi tidak tersedia.",
-    kapasitas_maks,
     tipe_sewa,
     harga_per_jam,
     harga_per_hari,
@@ -38,8 +35,6 @@ const ProductCard = ({ ruanganData }: ProductCardProps) => {
   } = ruanganData;
 
   const imageUrl = images?.[0]?.image_url || "/images/placeholder.jpg";
-
-  const deskripsi = deskripsi_venue || "Tidak ada deskripsi tersedia.";
 
   const kategoriNama =
     venueCategories?.[0]?.category.nama_kategori || "Tidak Diketahui";
@@ -55,8 +50,8 @@ const ProductCard = ({ ruanganData }: ProductCardProps) => {
   const detailUrl = `/Tempat/${id}`;
 
   return (
-    <div className="relative max-w-md  rounded-xl bg-white shadow-lg ">
-      <div className="flex h-50 items-center justify-center ">
+    <div className="relative max-w-md rounded-xl bg-white shadow-lg border">
+      <div className="flex h-60 items-center justify-center ">
         <Image
           src={imageUrl}
           alt={nama_ruangan}
@@ -65,29 +60,28 @@ const ProductCard = ({ ruanganData }: ProductCardProps) => {
           className="w-full overflow-hidden rounded-t-xl object-cover h-60"
         />
       </div>
+      <Button
+        size="icon"
+        onClick={() => setLiked(!liked)}
+        className="bg-primary/10 hover:bg-primary/20 absolute top-4 right-4 rounded-full"
+      >
+        <HeartIcon
+          className={cn(
+            liked ? "fill-destructive stroke-destructive" : "stroke-white"
+          )}
+        />
+        <span className="sr-only">Like</span>
+      </Button>
       <Card className="border-none ">
         <CardHeader>
           <CardTitle className="text-2xl truncate">{nama_ruangan}</CardTitle>
           <CardDescription className="flex flex-col gap-1">
             <Badge variant="outline" className="rounded-sm text-sm">
-              {kategoriNama}
+              {kategoriNama} {/* Data DInamis */}
             </Badge>
-            <div className="flex items-center mt-2">
-              <MapPin className="inline mr-1 h-4 w-4" />
-              <span>{alamat_venue}</span> {/* Data DInamis */}
-            </div>
-            <div className="flex items-center mt-2">
-              <User className="inline mr-1 h-4 w-4" />
-              <span>{kapasitas_maks || "N/A"} Orang Maksimal</span>{" "}
-              {/* Data DInamis */}
-            </div>
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="line-clamp-2">
-            {deskripsi} {/* Data DInamis */}
-          </p>
-        </CardContent>
+        <CardContent></CardContent>
         <CardFooter className="justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
           <div className="flex flex-col">
             <span className="text-sm font-medium uppercase">Harga</span>

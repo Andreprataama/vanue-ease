@@ -85,9 +85,6 @@ function SidebarContent() {
       {/* Logo */}
       <div className="border-b border-slate-800 p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center 600">
-            <div className="h-4 w-4 rounded-full bg-white"></div>
-          </div>
           <span className="text-lg font-semibold text-yellow-400 uppercase">
             Vanue Ease
           </span>
@@ -142,7 +139,6 @@ function SidebarContent() {
               <MoreHorizontal className="h-4 w-4 text-slate-400" />
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

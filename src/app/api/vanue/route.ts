@@ -182,7 +182,6 @@ export async function POST(request: Request) {
       peraturan_venue,
     } = validatedData.data;
 
-    // --- Pemrosesan File Gambar (Integrasi Supabase Storage) ---
     const imageLinks: {
       image_url: string;
       is_primary: boolean;

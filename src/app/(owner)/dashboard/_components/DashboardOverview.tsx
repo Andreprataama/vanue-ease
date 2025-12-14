@@ -1,6 +1,6 @@
 import {
-  LucideIceCream,
   Calendar,
+  Building,
   DollarSignIcon,
   TrendingUpIcon,
 } from "lucide-react";
@@ -21,7 +21,7 @@ interface MetricDetail {
 const details: MetricDetail[] = [
   {
     title: "Total Vanue",
-    icon: LucideIceCream,
+    icon: Building,
     key: "TotalVanue",
   },
   {
@@ -57,7 +57,7 @@ const DashboardOverview = (props: DashboardOverviewProps) => {
   };
 
   return (
-    <div className="w-full h-50  p-4 space-x-4  grid grid-cols-4">
+    <div className="w-full h-50   space-x-4  grid grid-cols-4">
       {details.map((detail, index) => {
         const valueKey = detail.key;
 

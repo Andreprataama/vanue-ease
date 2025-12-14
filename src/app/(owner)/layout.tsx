@@ -1,3 +1,5 @@
+// src/app/(owner)/layout.tsx
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -27,9 +29,11 @@ export default function RootLayout({
   return (
     <div className="flex flex-row-1 min-h-screen">
       <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
+
+      <div className="flex-1 flex flex-col max-h-screen">
         <DashboardHeader />
-        <div className="w-full">{children}</div>
+
+        <div className="flex-1 w-full overflow-y-auto">{children}</div>
       </div>
     </div>
   );
