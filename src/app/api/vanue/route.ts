@@ -5,7 +5,7 @@ import { z } from "zod";
 import prisma from "@/utils/prisma";
 import { auth } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
-import { supabase } from "@/utils/supabase"; // Klien Supabase
+import { supabase } from "@/utils/supabase";
 
 const formSchema = z
   .object({
@@ -87,6 +87,20 @@ export async function GET() {
         harga_per_jam: true,
         harga_per_hari: true,
         kapasitas_maks: true,
+        bookings: {
+          select: {
+            booking_id: true,
+            kode_unik: true,
+            nama_pemesan: true,
+            tanggal_mulai: true,
+            jam_mulai: true,
+            jam_akhir: true,
+            total_harga: true,
+            status_booking: true,
+            status_midtrans: true,
+          },
+          orderBy: { tanggal_mulai: "desc" },
+        },
         is_published: true,
         images: {
           where: { is_primary: true },

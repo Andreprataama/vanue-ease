@@ -23,7 +23,6 @@ const KelolaVenueMain = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State untuk konfirmasi penghapusan
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [venueToDelete, setVenueToDelete] = useState<number | null>(null);
 
@@ -53,20 +52,17 @@ const KelolaVenueMain = () => {
     }
   };
 
-  // 1. Handler yang membuka modal konfirmasi
   const handleOpenConfirm = async (venueId: number) => {
     setVenueToDelete(venueId);
     setIsConfirmOpen(true);
   };
 
-  // 2. Handler yang dipanggil setelah konfirmasi
   const handleDeleteConfirmed = async () => {
     if (venueToDelete === null) return;
 
-    setIsConfirmOpen(false); // Tutup modal
+    setIsConfirmOpen(false);
 
     try {
-      // Memanggil API DELETE dengan ID Vanue
       const response = await fetch(`/api/vanue/${venueToDelete}`, {
         method: "DELETE",
       });
@@ -75,7 +71,6 @@ const KelolaVenueMain = () => {
         throw new Error("Gagal menghapus venue di server.");
       }
 
-      // Jika berhasil, tampilkan pesan dan muat ulang data
       toast.success("Vanue berhasil dihapus!");
       fetchVenues();
     } catch (error) {
@@ -88,7 +83,7 @@ const KelolaVenueMain = () => {
 
   useEffect(() => {
     fetchVenues();
-  }, []); // Hanya berjalan sekali saat mount
+  }, []);
 
   if (isLoading) {
     return (
@@ -108,7 +103,7 @@ const KelolaVenueMain = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Kelola Vanue</h1>
         <Link href="/dashboard/kelola-vanue/tambah-vanue" passHref>
@@ -127,7 +122,6 @@ const KelolaVenueMain = () => {
         }}
       />
 
-      {/* Komponen AlertDialog untuk Konfirmasi */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
