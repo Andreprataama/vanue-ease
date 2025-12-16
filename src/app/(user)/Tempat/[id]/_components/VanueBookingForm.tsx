@@ -91,7 +91,6 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
 
     setIsProcessing(true);
 
-    // Kumpulkan data booking untuk dikirim ke checkout page
     const bookingData = {
       date: date.toISOString().split("T")[0],
       time: timeSlot,

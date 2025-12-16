@@ -57,7 +57,7 @@ const DashboardOverview = (props: DashboardOverviewProps) => {
   };
 
   return (
-    <div className="w-full h-50   space-x-4  grid grid-cols-4">
+    <div className="w-full h-50 space-x-4  flex flex-col md:grid md:grid-cols-4 space-y-4">
       {details.map((detail, index) => {
         const valueKey = detail.key;
 
@@ -77,7 +77,7 @@ const DashboardOverview = (props: DashboardOverviewProps) => {
               <detail.icon size={30} className="text-yellow-400" />
             </div>
 
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl md:text-3xl font-bold">
               {formatValue(valueKey, value)}
             </h1>
           </div>

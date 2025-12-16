@@ -15,7 +15,7 @@ const Page = async ({ params }: { params: { id: string } }) => {
 
   return (
     <div className="min-h-screen">
-      <Breadcrumb className="w-full px-12 mt-10">
+      <Breadcrumb className="w-full px-5 md:px-10 mt-5 md:mt-10">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>

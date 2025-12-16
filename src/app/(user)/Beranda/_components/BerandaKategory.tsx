@@ -1,7 +1,5 @@
-// src/app/(user)/Beranda/_components/BerandaKategory.tsx
-
 import { Briefcase, Building, Users, Coffee, Palette } from "lucide-react";
-import Link from "next/link"; // Import Link untuk navigasi
+import Link from "next/link";
 
 const categories = [
   {
@@ -28,20 +26,19 @@ const categories = [
 
 const BerandaKategory = () => {
   return (
-    <section className="h-full p-10">
+    <section className="h-full p-4 md:p-10">
       <div className="w-full bg-black rounded-xl p-6">
         <h1 className="text-white text-2xl ml-2 font-extrabold">Kategori</h1>
-        <div className="flex flex-row items-center">
+        <div className="grid grid-cols-2 gap-4 md:flex md:flex-row items-center">
           {categories.map((category) => (
-            // Mengarahkan ke /Tempat dengan query kategori
             <Link
               key={category.name}
               href={`/Tempat?kategori=${encodeURIComponent(category.name)}`}
               passHref
             >
-              <div className="items-center space-x-4 p-4 rounded-lg cursor-pointer mt-4">
-                <div className="items-center flex justify-center w-40 border-2 rounded-xl h-30 hover:border-yellow-400 ">
-                  <category.icon className="text-white" size={75} />
+              <div className="items-center space-x-4 p-2 md:p-4 rounded-lg cursor-pointer mt-4">
+                <div className="items-center flex justify-center w-30 md:w-40 border-2 rounded-xl h-30 hover:border-yellow-400 ">
+                  <category.icon className="text-white " size={75} />
                 </div>
                 <h1 className="text-white text-md text-center mt-2 font-semibold">
                   {category.name}

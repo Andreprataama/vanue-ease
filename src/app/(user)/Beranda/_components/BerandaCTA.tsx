@@ -3,8 +3,8 @@ import Link from "next/link";
 
 const BerandaCTA = () => {
   return (
-    <section className="w-full h-64 items-center justify-center flex space-y-4 flex-col py-50  text-center">
-      <p className="text-4xl font-bold">
+    <section className="w-full h-64 items-center justify-center flex space-y-4 flex-col py-50 px-4 text-center ">
+      <p className="text-2xl md:text-4xl font-bold">
         Punya Tempat Keren Tapi Bingung Cara Meramaikannya?
       </p>
       <p className="text-md">

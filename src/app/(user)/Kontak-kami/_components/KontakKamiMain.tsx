@@ -111,7 +111,7 @@ const KontakKami = () => {
                     onChange={(e) => handleChange("firstName", e.target.value)}
                     className="border-border bg-card h-12 pl-10"
                     required
-                    disabled={isSubmitting} // Nonaktifkan saat mengirim
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="relative">
@@ -211,7 +211,7 @@ const KontakKami = () => {
 
           {/* Right Column - Hero Image */}
           <div className="relative">
-            <div className="overflow-hidden rounded-2xl shadow-lg">
+            <div className="overflow-hidden hidden md:block rounded-2xl shadow-lg">
               <Image
                 src="https://plus.unsplash.com/premium_photo-1667339610013-020844b87990?q=80&w=1287&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Vanue Ease"

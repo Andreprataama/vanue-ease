@@ -2,11 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 import {
   BarChart3,
   FileText,
-  Settings,
   Building,
   MoreHorizontal,
   CircleDollarSign,
@@ -61,18 +59,6 @@ const sidebarItems = [
     label: "Riwayat Pemesanan",
     link: "/dashboard/riwayat-pesanan",
     headers: "Riwayat Pemesanan",
-  },
-  {
-    icon: CircleDollarSign,
-    label: "Laporan Keuangan",
-    link: "/dashboard/laporan-keuangan",
-    headers: "Laporan Keuangan",
-  },
-  {
-    icon: Settings,
-    label: "Settings",
-    link: "/dashboard/settings",
-    headers: "Settings",
   },
 ];
 

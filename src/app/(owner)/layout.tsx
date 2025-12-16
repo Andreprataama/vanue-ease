@@ -33,7 +33,9 @@ export default function RootLayout({
       <div className="flex-1 flex flex-col max-h-screen">
         <DashboardHeader />
 
-        <div className="flex-1 w-full overflow-y-auto">{children}</div>
+        <div className="flex-1 w-100 md:w-full h-screen overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );

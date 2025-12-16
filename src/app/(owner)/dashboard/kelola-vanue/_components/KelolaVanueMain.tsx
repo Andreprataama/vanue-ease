@@ -163,8 +163,8 @@ const KelolaVenueMain = () => {
 
   return (
     <div className="container mx-auto p-4 space-y-8">
-      <header className="flex justify-between items-center ">
-        <h1 className="text-3xl font-extrabold text-gray-800">
+      <header className="w-full flex justify-between items-center ">
+        <h1 className="text-xl md:text-3xl font-extrabold text-gray-800">
           Kelola Tempat Anda
         </h1>
         <Link href="/dashboard/kelola-vanue/tambah-vanue" passHref>

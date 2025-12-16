@@ -55,7 +55,7 @@ const ProductCard = ({ ruanganData }: ProductCardProps) => {
   const detailUrl = `/Tempat/${id}`;
 
   return (
-    <div className="relative max-w-md  rounded-xl bg-white shadow-lg ">
+    <div className="relative max-w-md  rounded-xl bg-white  ">
       <div className="flex h-50 items-center justify-center ">
         <Image
           src={imageUrl}

@@ -156,7 +156,7 @@ const DashboardMain = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 ">
+    <div className="w-full p-4 md:p-8 space-y-6 ">
       {/* 1. Overview Metrik */}
       <DashboardOverview {...dashboardProps} />
 

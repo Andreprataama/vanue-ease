@@ -10,8 +10,10 @@ import { formatRupiah } from "@/utils/currency";
 import { Booking } from "./DashboardMain"; // Import Booking interface
 
 interface DashboardUpComingProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   allVenues: any[] | undefined;
   isLoading: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: any;
 }
 
@@ -53,6 +55,7 @@ const getEndDate = (filter: FilterType): Date => {
  * Filter data booking yang akan datang berdasarkan periode
  */
 const filterUpcomingBookings = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   venues: any[],
   filter: FilterType
 ): (Booking & { venueName: string })[] => {
@@ -115,7 +118,7 @@ const DashboardUpComing = ({
 
       <CardContent>
         {/* Filter Buttons */}
-        <div className="flex space-x-2 mb-4">
+        <div className="flex space-x-2 mb-4 overflow-x-scroll ">
           {FILTER_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
@@ -149,7 +152,7 @@ const DashboardUpComing = ({
               filteredData.map((booking) => (
                 <div
                   key={booking.booking_id}
-                  className="p-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                  className="p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex justify-between items-start">
                     {/* Data Kiri: Venue Name & Pemesan */}

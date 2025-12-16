@@ -22,7 +22,7 @@ const BerandaPopulerVanue = () => {
   }
 
   return (
-    <section className="h-full p-10">
+    <section className="h-full p-4 md:p-10">
       <div className="w-full bg-black rounded-xl p-6 ml-2">
         <h1 className="text-white text-2xl font-extrabold">
           Semua Daftar Vanue Populer
@@ -31,7 +31,7 @@ const BerandaPopulerVanue = () => {
           Lihatlah tempat-tempat pilihan yang bedasarkan lokasi anda dan tempat
           terbaik dari penyewa kami.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-10 space-y-4 md:space-y-0">
           {vanues.map((vanue) => (
             <ProductCard key={vanue.id} ruanganData={vanue} />
           ))}

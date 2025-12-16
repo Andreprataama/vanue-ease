@@ -79,7 +79,7 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
 
   return (
     <div>
-      <div className=" p-12 min-h-screen">
+      <div className="p-6 md:p-12 min-h-screen">
         <div className="relative h-[400px] w-full bg-black rounded-2xl overflow-hidden mb-8">
           <Image
             src={mainImageUrl}
@@ -89,12 +89,12 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
             priority
             className="opacity-80 rounded-2xl overflow-hidden"
           />
-          <div className="absolute inset-0  from-black/80 to-transparent p-10 flex flex-col justify-end">
-            <p className="text-white/80 text-lg font-medium mb-2">
+          <div className="absolute inset-0  from-black/80 to-transparent p-5 md:p-10 flex flex-col justify-end">
+            <p className="text-white text-lg font-bold mb-2 ">
               {venueCategories?.[0]?.category?.nama_kategori ||
                 "Tidak Dikategorikan"}
             </p>
-            <h1 className="text-white text-5xl font-extrabold">
+            <h1 className="text-white text-2xl md:text-5xl font-extrabold">
               {nama_ruangan}
             </h1>
             <div className="flex items-center text-white/90 mt-4">
@@ -104,8 +104,8 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
           </div>
         </div>
 
-        <div className="flex flex-row gap-6 mb-8 ">
-          <div className="flex flex-col gap-6 p-8 w-3/4  shadow-md rounded-2xl border ">
+        <div className="flex flex-col md:flex md:flex-row gap-6 mb-8 ">
+          <div className="flex flex-col gap-6 p-8 w-full md:w-3/4  shadow-md rounded-2xl border ">
             {/* Lokasi */}
             <div className="flex items-center">
               <MapPin className="h-5 w-5 mr-2 " />
@@ -160,7 +160,7 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
                     (img: { image_url: string }, index: number) => (
                       <div
                         key={index}
-                        className="min-w-[300px] h-48 relative shrink-0 snap-center rounded-lg overflow-hidden"
+                        className="w-[300px] h-[300px] relative shrink-0 snap-center rounded-lg overflow-hidden"
                       >
                         <ImageZoom>
                           <Image
@@ -172,7 +172,6 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
                             width={1000}
                           />
                         </ImageZoom>
-                        );
                       </div>
                     )
                   )
@@ -186,7 +185,7 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
           </div>
 
           {/* KOLOM KANAN: BOOKING */}
-          <div className="w-1/4 h-full">
+          <div className="w-full md:w-1/4 h-full">
             <VenueBookingForm
               venueId={venue.id}
               hargaPerUnit={hargaNumber}
@@ -194,11 +193,6 @@ const TempatDetail = ({ id }: TempatDetailMainProps) => {
               kapasitasMaks={kapasitas_maks || 1}
             />
           </div>
-        </div>
-
-        <div className="w-full h-64 bg-white border-t pt-8">
-          <h2 className="font-bold text-xl mb-4">Tempat Lainnya</h2>
-          Another Place Placeholder
         </div>
       </div>
     </div>

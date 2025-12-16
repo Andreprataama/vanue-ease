@@ -300,9 +300,8 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
     }
   };
 
-  // --- Tampilan Utama ---
   return (
-    <div className="container mx-auto py-20 max-w-2xl">
+    <div className="container mx-auto py-10 md:py-20 max-w-2xl p-5 md:p-0">
       <Card
         className={`border-t-8 ${metadata.color.replace("text", "border")}`}
       >
@@ -310,9 +309,6 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
           <StatusIcon className={`w-12 h-12 mx-auto mb-3 ${metadata.color}`} />
           <CardTitle className="text-3xl">{metadata.title}</CardTitle>
           <p className="text-muted-foreground mt-2">{metadata.detail}</p>
-          <p className="text-sm font-semibold mt-4">
-            Status Pembayaran anda : {bookingData.status_booking}
-          </p>
         </CardHeader>
 
         <CardContent className="space-y-6">

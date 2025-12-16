@@ -21,12 +21,10 @@ import {
 } from "@/components/ui/table";
 import {
   Search,
-  Loader2,
   Filter,
   CheckCircle,
   Clock,
   XCircle,
-  Home,
   Package,
   AlertTriangle,
   ChevronLeft, // Ikon untuk paginasi
@@ -232,7 +230,7 @@ const RiwayatPesananMain = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
+    <div className="container w-fullmx-auto p-4 md:p-8 space-y-6">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-gray-800">
@@ -253,7 +251,7 @@ const RiwayatPesananMain = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500 flex-shrink-0 hidden sm:block" />
+              <Filter className="h-4 w-4 text-gray-500 shrink-0 hidden sm:block" />
               <Select
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter(v as StatusFilter)}
@@ -391,7 +389,6 @@ const RiwayatPesananMain = () => {
                 className="text-gray-600 border-gray-300"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
-                Sebelumnya
               </Button>
 
               <div className="text-sm font-medium text-gray-700">
@@ -405,7 +402,6 @@ const RiwayatPesananMain = () => {
                 size="sm"
                 className="text-gray-600 border-gray-300"
               >
-                Berikutnya
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>

@@ -18,26 +18,26 @@ const venueData = [
 
 const BerandaVanueUs = () => {
   return (
-    <section className="flex flex-row w-full h-full gap-10 px-25 justify-center py-20">
-      <div className="w-1/2 items-center justify-center flex">
-        <div>
+    <section className="grid grid-cols-1 md:flex md:flex-row w-full h-full gap-10 px-8 md:px-25 justify-center  py-10 md:py-20">
+      <div className="w-full md:w-1/2 items-center justify-center flex">
+        <div className="">
           <h1 className="text-4xl">
             Mengapa Harus <br />
             Memilih{" "}
           </h1>
-          <h1 className="text-7xl text-end font-semibold">Venue Ease?</h1>
+          <h1 className="text-7xl  text-end  font-semibold">Venue Ease?</h1>
         </div>
       </div>
-      <div className="w-1/2">
+      <div className="w-full md:w-1/2">
         {venueData.map((item) => (
           <div
             key={item.number}
-            className="flex flex-row gap-10 border-t-2 border-gray-700 p-10"
+            className="flex flex-row gap-10 border-t-2 border-gray-700 p-4 md:p-10"
           >
             <div className="text-6xl  font-bold w-1/4 flex justify-center items-start">
               {item.number}
             </div>
-            <div className="text-xl font-semibold w-3/4">
+            <div className="text-md md:text-xl font-semibold w-3/4">
               {item.description}
             </div>
           </div>

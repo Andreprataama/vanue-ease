@@ -9,8 +9,6 @@ import {
   Building,
   Users,
   CircleDollarSign,
-  Mail,
-  HelpCircle,
   ChevronRight,
   Home,
   BookOpen,
@@ -22,9 +20,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"; // Menggunakan komponen Accordion yang Anda sediakan
-
-// --- Data Struktur Bantuan ---
+} from "@/components/ui/accordion";
 
 const USER_HELP_TOPICS = [
   {
@@ -131,14 +127,12 @@ const HelpCard = ({ title, description, icon: Icon, link }: HelpCardProps) => {
               Owner Feature
             </Badge>
           )}
-          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
         </div>
       </Card>
     </Link>
   );
 };
 
-// --- Komponen Utama ---
 const BantuanMain = () => {
   return (
     <div className="container mx-auto py-10 lg:py-16 p-5">
@@ -152,9 +146,7 @@ const BantuanMain = () => {
         </p>
       </div>
 
-      {/* --- Bagian Bantuan Penyewa --- */}
       <h2 className="text-2xl font-semibold mb-6 flex items-center">
-        {/* Ikon Users (Penyewa) diubah ke text-foreground (hitam) */}
         <Users className="w-6 h-6 mr-3 text-foreground" />
         Untuk Penyewa
       </h2>

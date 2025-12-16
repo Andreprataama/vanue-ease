@@ -19,7 +19,7 @@ const TempatHeroSection = () => {
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4 text-center">
           Temukan Tempat Sempurna Anda
         </h1>
-        <p className="text-md text-gray-300 mb-8 text-center max-w-lg">
+        <p className="text-xs md:text-md text-gray-300 mb-8 text-center max-w-lg">
           Jelajahi ribuan pilihan venue terbaik untuk acara apa pun.
         </p>
       </div>

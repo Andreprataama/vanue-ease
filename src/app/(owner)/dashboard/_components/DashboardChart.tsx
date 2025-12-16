@@ -17,7 +17,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-// --- TYPE DATA UNTUK CHART ---
 export interface RevenueChartData {
   date: string; // Format YYYY-MM-DD
   revenue: number; // Nilai total pendapatan pada tanggal tersebut
@@ -58,7 +57,6 @@ export function DashboardChart({
     [chartData]
   );
 
-  // Tampilan jika data kosong
   if (chartData.length === 0) {
     return (
       <Card className="py-4 sm:py-0">
@@ -76,7 +74,7 @@ export function DashboardChart({
   }
 
   return (
-    <Card className="py-4 sm:py-0">
+    <Card className="py-4 mt-85 md:mt-0 sm:py-0">
       <CardHeader className="flex flex-col h-20 items-stretch border-b p-0! sm:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 pb-3 sm:pb-0">
           <CardTitle>Tren Pendapatan </CardTitle>
