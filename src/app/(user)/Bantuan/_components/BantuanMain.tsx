@@ -9,7 +9,6 @@ import {
   Building,
   Users,
   CircleDollarSign,
-  ChevronRight,
   Home,
   BookOpen,
 } from "lucide-react";
@@ -111,7 +110,6 @@ const HelpCard = ({ title, description, icon: Icon, link }: HelpCardProps) => {
     <Link href={link} className="block group">
       <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-foreground dark:hover:border-yellow-400">
         <CardHeader className="flex flex-row items-start justify-between space-y-0">
-          {/* Ikon diubah menjadi text-foreground (hitam/putih) */}
           <Icon className="w-8 h-8 text-foreground group-hover:text-yellow-500 transition-colors" />
         </CardHeader>
         <CardContent>

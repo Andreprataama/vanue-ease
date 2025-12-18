@@ -60,8 +60,6 @@ const fetcher: Fetcher<ApiResponse> = (url: string) =>
 
 const ITEMS_PER_PAGE = 6;
 
-// --- Komponen Utama ---
-
 const TempatFilterSection = () => {
   const { data } = useSWR<ApiResponse>(`/api/public-vanue`, fetcher);
   const searchParams = useSearchParams();

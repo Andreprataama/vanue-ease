@@ -27,14 +27,13 @@ import {
   XCircle,
   Package,
   AlertTriangle,
-  ChevronLeft, // Ikon untuk paginasi
-  ChevronRight, // Ikon untuk paginasi
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { formatRupiah } from "@/utils/currency";
-import { Button } from "@/components/ui/button"; // Asumsi Anda memiliki komponen Button
+import { Button } from "@/components/ui/button";
 
-// --- Tipe Data (Dipertahankan dari input) ---
 interface Booking {
   kode_unik: string;
   nama_pemesan: string;
@@ -112,7 +111,6 @@ const getStatusBadge = (status: string) => {
   );
 };
 
-// --- Komponen Loading Skeleton untuk Tabel ---
 const TableSkeleton: React.FC = () => (
   <TableBody>
     {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
@@ -213,7 +211,6 @@ const RiwayatPesananMain = () => {
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
 
-  // Penanganan Error
   if (error) {
     return (
       <div className="container mx-auto p-4 md:p-8">
@@ -238,7 +235,6 @@ const RiwayatPesananMain = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* FILTER CONTROLS */}
           <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center ">
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

@@ -1,35 +1,30 @@
 "use client";
-
 import useSWR from "swr";
-// Import semua komponen
 import DashboardOverview from "./DashboardOverview";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardChart, RevenueChartData } from "./DashboardChart";
 import DashboardUpComing from "./DashboardUpComing";
 
-// --- 1. DEFINISI TIPE DATA (Diekspor untuk penggunaan di komponen lain) ---
 export interface Booking {
   booking_id: number;
   total_harga: string;
   status_booking: string;
   tanggal_mulai: string;
-  jam_mulai: string; // Diperlukan untuk upcoming bookings
-  nama_pemesan: string; // Diperlukan untuk upcoming bookings
-  kode_unik: string; // Diperlukan untuk upcoming bookings
+  jam_mulai: string;
+  nama_pemesan: string;
+  kode_unik: string;
 }
 
 interface Ruangan {
-  id: number; // Diperlukan untuk upcoming bookings (venueName)
-  nama_ruangan: string; // Diperlukan untuk upcoming bookings
+  id: number;
+  nama_ruangan: string;
   bookings: Booking[];
 }
-
 interface ApiResponse {
   success: boolean;
   data: Ruangan[];
 }
 
-// --- 2. FUNGSI FETCHER ---
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
@@ -39,7 +34,6 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
-// --- 3. FUNGSI PERHITUNGAN METRIK (Total Revenue) ---
 function hitungTotalRevenue(venues: Ruangan[]): number {
   if (!venues || venues.length === 0) {
     return 0;
@@ -60,7 +54,6 @@ function hitungTotalRevenue(venues: Ruangan[]): number {
   return totalRevenue;
 }
 
-// --- 4. FUNGSI AGREGRASI DATA UNTUK CHART ---
 function aggregateRevenueByDay(venues: Ruangan[]): RevenueChartData[] {
   if (!venues || venues.length === 0) {
     return [];
@@ -91,7 +84,6 @@ function aggregateRevenueByDay(venues: Ruangan[]): RevenueChartData[] {
   return chartData;
 }
 
-// --- 5. KOMPONEN UTAMA DASHBOARD ---
 const DashboardMain = () => {
   const API_ENDPOINT = "/api/vanue";
 
@@ -101,10 +93,9 @@ const DashboardMain = () => {
     isLoading,
   } = useSWR<ApiResponse>(API_ENDPOINT, fetcher);
 
-  const allVenues = apiResponse?.data; // Data mentah untuk dioper ke UpComing
+  const allVenues = apiResponse?.data;
   const venues = apiResponse?.data || [];
 
-  // --- Perhitungan Metrik ---
   const TotalVanue = venues.length;
   const TotalRevanue = hitungTotalRevenue(venues);
 
@@ -118,15 +109,12 @@ const DashboardMain = () => {
     TotalBookingAll > 0 ? (TotalBookingSuccess / TotalBookingAll) * 100 : 0;
   const formattedConversionRate = parseFloat(ConversionRate.toFixed(2));
 
-  // Perhitungan Data Chart
   const revenueChartData = aggregateRevenueByDay(venues);
 
-  // --- DEBUGGING LOG (Hapus jika sudah production) ---
   if (process.env.NODE_ENV === "development") {
     console.log("Data Chart Revenue:", revenueChartData);
   }
 
-  // --- Tampilan Loading dan Error ---
   if (error) {
     return (
       <div className="p-4 md:p-8 text-red-600">
@@ -146,8 +134,6 @@ const DashboardMain = () => {
       </div>
     );
   }
-
-  // --- Props untuk Overview ---
   const dashboardProps = {
     TotalVanue,
     TotalBooking: TotalBookingSuccess,
@@ -157,7 +143,6 @@ const DashboardMain = () => {
 
   return (
     <div className="w-full p-4 md:p-8 space-y-6 ">
-      {/* 1. Overview Metrik */}
       <DashboardOverview {...dashboardProps} />
 
       <DashboardChart chartData={revenueChartData} />

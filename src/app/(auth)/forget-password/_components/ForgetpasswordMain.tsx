@@ -78,7 +78,6 @@ export function ForgetpasswordMain() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            {/* Menggunakan form.handleSubmit(onSubmit) untuk menangani submit */}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}

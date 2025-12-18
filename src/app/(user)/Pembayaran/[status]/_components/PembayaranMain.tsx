@@ -310,9 +310,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
           <CardTitle className="text-3xl">{metadata.title}</CardTitle>
           <p className="text-muted-foreground mt-2">{metadata.detail}</p>
         </CardHeader>
-
         <CardContent className="space-y-6">
-          {/* Section 1: Ringkasan Transaksi & Harga */}
           <h3 className="text-xl font-bold border-b pb-2">
             Ringkasan Transaksi
           </h3>
@@ -330,11 +328,7 @@ const PembayaranMain = ({ status }: PembayaranMainProps) => {
               </span>
             </div>
           </div>
-
-          {/* Section 2: KONTEN SPESIFIK STATUS DAN TOMBOL AKSI */}
           <div className="pt-4 border-t">{renderStatusSpecificContent()}</div>
-
-          {/* Section 3: Detail Waktu & Pemesan */}
           <h3 className="text-xl font-bold border-t pt-4">
             Detail Waktu & Pemesan
           </h3>

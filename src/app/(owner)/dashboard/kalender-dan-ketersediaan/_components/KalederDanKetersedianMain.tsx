@@ -1,5 +1,3 @@
-// src/app/(owner)/dashboard/_components/KalederDanKetersedianMain.tsx
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,15 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar"; // Calendar dari Shadcn UI
 import useSWR, { Fetcher } from "swr";
 
-// ... (DEFINISI TIPE DATA tetap sama) ...
-
 interface RawApiBooking {
   booking_id: number;
   kode_unik: string;
   nama_pemesan: string;
-  tanggal_mulai: string; // E.g., "2026-01-21T00:00:00.000Z"
-  jam_mulai: string; // E.g., "1970-01-01T08:00:00.000Z"
-  jam_akhir: string | null; // E.g., "1970-01-01T10:00:00.000Z" atau null
+  tanggal_mulai: string;
+  jam_mulai: string;
+  jam_akhir: string | null;
   total_harga: string;
   status_booking: "SUCCESS" | "PENDING" | "CANCELED";
   status_midtrans: string | null;
@@ -28,25 +24,22 @@ interface VenueData {
   id: number;
   nama_ruangan: string;
   bookings: RawApiBooking[];
-  // ... properti venue lainnya
 }
 
 interface ApiResponse {
   success: boolean;
-  data: VenueData[]; // Array of VenueData
+  data: VenueData[];
 }
 
 interface FlattenedBooking {
   id: number;
   venueName: string;
-  tanggal_mulai: string; // YYYY-MM-DD
-  jam_mulai_time: string; // HH:MM
-  jam_selesai_time: string; // HH:MM
+  tanggal_mulai: string;
+  jam_mulai_time: string;
+  jam_selesai_time: string;
   status_booking: "SUCCESS" | "PENDING" | "CANCELED";
   nama_pemesan: string;
 }
-
-// ... (API Fetcher dan Helper Functions tetap sama) ...
 
 const API_ENDPOINT = "/api/vanue";
 const fetcher: Fetcher<ApiResponse> = async (url: string) => {
@@ -182,7 +175,6 @@ const KalederDanKetersedianMain = () => {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[60vh]">
-        {/* Kolom 1: KALENDER UTAMA */}
         <Card className="shadow-xl lg:col-span-2 flex flex-col h-full">
           <CardHeader className="border-b">
             <CardTitle className="text-xl">Kalender Booking</CardTitle>
@@ -252,8 +244,6 @@ const KalederDanKetersedianMain = () => {
           </CardContent>
         </Card>
 
-        {/* Kolom 2: DETAIL BOOKING */}
-        {/* Menggunakan h-full agar tingginya sama dengan card Calendar */}
         <Card className="shadow-xl h-full flex flex-col">
           <CardHeader className="border-b">
             <CardTitle className="text-xl">
@@ -262,7 +252,7 @@ const KalederDanKetersedianMain = () => {
                 `: ${format(selectedDate, "dd MMMM yyyy", { locale: id })}`}
             </CardTitle>
           </CardHeader>
-          {/* flex-1 dan overflow-y-auto di sini mengontrol scrolling internal Detail Booking */}
+
           <CardContent className="p-4 space-y-3 flex-1 overflow-y-auto">
             {!selectedDate ? (
               <p className="text-muted-foreground mt-4">

@@ -30,7 +30,6 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 
-// --- Zod Schema Definition ---
 const formSchema = z
   .object({
     nama_ruangan: z.string().min(1, "Nama Vanue wajib diisi."),
@@ -96,7 +95,7 @@ const PhotoBox = ({
   index,
   label,
   isMain = false,
-  preview, // Mengambil preview langsung
+  preview,
   handleFileChange,
   handleDelete,
 }: {
@@ -158,7 +157,6 @@ const PhotoBox = ({
 };
 
 const TambahVanueMain = () => {
-  // --- State diubah untuk menyimpan File object dan preview URL ---
   const [galleryData, setGalleryData] = useState<GalleryItem[]>(
     Array(5).fill({ preview: null, file: null })
   );
@@ -191,7 +189,7 @@ const TambahVanueMain = () => {
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
       const file = event.target.files?.[0];
-      const newGalleryData = [...galleryData]; // Gunakan state baru
+      const newGalleryData = [...galleryData];
 
       if (file) {
         if (!file.type.startsWith("image/")) {
@@ -282,7 +280,6 @@ const TambahVanueMain = () => {
       setIsLoading(false);
     }
   };
-  // --- AKHIR LOGIKA SUBMIT API ---
 
   return (
     <section className="container mx-auto py-8 lg:py-5 p-5 ">
@@ -291,7 +288,6 @@ const TambahVanueMain = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-8">
-                {/* --- Galeri Foto Vanue --- */}
                 <div className="space-y-4">
                   <div className="">
                     <Label className="text-xl font-semibold">
@@ -301,7 +297,7 @@ const TambahVanueMain = () => {
                       Masukkan Foto terbaik Tempat Anda
                     </p>
                   </div>
-                  {/* Panggil PhotoBox dengan data dari state galleryData */}
+
                   <PhotoBox
                     index={0}
                     label={GALLERY_LABELS[0]}
@@ -324,8 +320,6 @@ const TambahVanueMain = () => {
                     ))}
                   </div>
                 </div>
-
-                {/* --- Deskripsi Vanue (Bagian ini tetap sama) --- */}
                 <div className="space-y-3 pt-4">
                   <div>
                     <Label className="text-xl font-semibold">
@@ -385,9 +379,7 @@ const TambahVanueMain = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-8">
-                {/* --- Harga dan Kapasitas (Bagian ini tetap sama) --- */}
                 <div className="space-y-4">
                   <div className="">
                     <Label className="text-xl font-semibold">

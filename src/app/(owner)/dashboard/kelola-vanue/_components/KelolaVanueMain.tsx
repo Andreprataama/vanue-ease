@@ -26,15 +26,15 @@ interface Venue {
   id: number;
   nama_ruangan: string;
   tipe_sewa: "perjam" | "perhari";
-  harga_per_jam: string | null; // Sesuaikan dengan data API
-  harga_per_hari: string | null; // Sesuaikan dengan data API
-  category?: string; // Tipe ini mungkin tidak diperlukan lagi jika menggunakan venueCategories
+  harga_per_jam: string | null;
+  harga_per_hari: string | null;
+  category?: string;
   kapasitas_maks: number;
-  deskripsi_venue?: string; // Tambahkan '?' jika ini tidak selalu ada
-  alamat_venue?: string; // Tambahkan '?'
-  fasilitas_kustom?: string; // Tambahkan '?'
-  peraturan_venue?: string; // Tambahkan '?'
-  bookings: Booking[]; // Sesuaikan dengan tipe Booking Anda
+  deskripsi_venue?: string;
+  alamat_venue?: string;
+  fasilitas_kustom?: string;
+  peraturan_venue?: string;
+  bookings: Booking[];
   is_published: boolean;
   images: { image_url: string; sort_order?: number; is_primary?: boolean }[];
   status_venue: "ACTIVE" | "PENDING" | "BLOCKED";
@@ -84,7 +84,7 @@ const KelolaVenueMain = () => {
       const result = await response.json();
 
       if (Array.isArray(result.data)) {
-        setVenues(result.data as Venue[]); // Type assertion
+        setVenues(result.data as Venue[]);
       } else {
         setVenues([]);
       }
@@ -113,7 +113,6 @@ const KelolaVenueMain = () => {
       });
 
       if (!response.ok) {
-        // Coba ambil pesan error dari respons jika ada
         const errorData = await response.json();
         throw new Error(
           errorData.message || "Gagal menghapus venue di server."

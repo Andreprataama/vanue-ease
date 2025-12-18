@@ -83,7 +83,6 @@ const TentangKamiMain = () => {
           </div>
         </div>
       </section>
-
       <hr className="border-gray-300" />
     </div>
   );

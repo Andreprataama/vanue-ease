@@ -25,6 +25,7 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   emailAndPassword: {
+    accountEnumerationPrevention: false,
     enabled: true,
     autoSignIn: true,
     minPasswordLength: 8,
